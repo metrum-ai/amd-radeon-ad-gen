@@ -1,0 +1,18 @@
+/* Created by Metrum AI for AMD */
+
+.brief-brand{margin-bottom:16px;}
+.brief-brand__presets{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;}
+.brief-brand__preset{flex:0 0 auto;min-width:120px;transition:all .15s ease;cursor:pointer;}
+.brief-brand__custom{flex:0 0 auto;min-width:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .15s ease;cursor:pointer;}
+.brief-brand__summaryHeader{display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.brief-brand__summaryMain{display:flex;align-items:center;gap:14px;}
+.brief-brand__swatches{display:flex;align-items:center;gap:12px;}
+.brief-brand__swatchRow{display:flex;gap:3px;}
+.brief-brand__editor{animation:fadeIn .2s ease;}
+.brief-brand__fieldBlock{margin-bottom:20px;}
+.brief-brand__rowBetween{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.brief-brand__stack{display:flex;flex-direction:column;gap:8px;}
+.brief-brand__colorItem{display:flex;align-items:center;gap:10px;}
+.brief-brand__colorInputs{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+.brief-brand__fontItem{display:flex;align-items:center;gap:10px;}
+.brief-brand__editorFooter{margin-top:20px;padding-top:16px;}

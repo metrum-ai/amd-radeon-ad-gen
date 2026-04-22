@@ -1,0 +1,10 @@
+# Created by Metrum AI for AMD
+
+services:
+  frontend:
+    build:
+      context: .
+    env_file:
+      - ../.env
+    depends_on:
+      - backend

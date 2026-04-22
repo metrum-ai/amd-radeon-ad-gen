@@ -1,0 +1,139 @@
+# Created by Metrum AI for AMD
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres  # pragma: allowlist secret
+      POSTGRES_DB: adgen
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-08T15-41-24Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin  # pragma: allowlist secret
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-http://localhost:8080/minio-console}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+    env_file: ../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  celery-worker:
+    build:
+      context: .
+    command: >
+      python -m celery -A app.workers.celery_app worker
+      --loglevel=info
+      --concurrency=4
+      -Q default,strategy,compositor,audio,finalize
+    env_file: ../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  celery-worker-gpu:
+    build:
+      context: .
+    command: >
+      python -m celery -A app.workers.celery_app worker
+      --loglevel=info
+      --concurrency=1
+      --pool=solo
+      -Q image_gen,video_gen
+      -n gpu1@%h
+    env_file: ../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  celery-worker-gpu-2:
+    profiles: ["image2"]
+    build:
+      context: .
+    command: >
+      python -m celery -A app.workers.celery_app worker
+      --loglevel=info
+      --concurrency=1
+      --pool=solo
+      -Q image_gen
+      -n gpu2@%h
+    env_file: ../.env
+    environment:
+      - APP_LOCAL_IMAGE_URL=http://flux-server-2:8002
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  celery-beat:
+    build:
+      context: .
+    command: >
+      python -m celery -A app.workers.celery_app beat
+      --loglevel=info
+    env_file: ../.env
+    depends_on:
+      valkey:
+        condition: service_healthy
+
+  metrics-scraper:
+    build:
+      context: .
+    command: python -m app.services.metrics_scraper
+    env_file: ../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+      amd-device-metrics-exporter:
+        condition: service_started
+
+volumes:
+  pgdata:
+  miniodata:

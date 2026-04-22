@@ -1,0 +1,14 @@
+asyncpg==0.31.0
+celery[redis]==5.6.2
+defusedxml==0.7.1
+fastapi==0.133.0
+httpx==0.28.1
+minio==7.2.20
+numpy==2.4.2
+pillow==12.1.1
+psycopg2-binary==2.9.11
+pydantic-settings==2.13.1
+pytesseract==0.3.13
+redis==6.4.0
+sqlalchemy[asyncio]==2.0.47
+uvicorn[standard]==0.41.0

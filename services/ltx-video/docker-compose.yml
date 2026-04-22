@@ -1,0 +1,30 @@
+# Created by Metrum AI for AMD
+
+services:
+  ltx-video:
+    profiles: ["video"]
+    build:
+      context: .
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=12.0.1
+      - HIP_VISIBLE_DEVICES=${LTX_VIDEO_GPU_ID:-3}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+      - VIDEO_BASE_MODEL=Lykon/DreamShaper
+      - LIGHTNING_STEPS=2
+      - MOTION_LORA=guoyww/animatediff-motion-lora-zoom-out
+      - MOTION_LORA_STRENGTH=0.75
+      - PYTORCH_HIP_ALLOC_CONF=expandable_segments:True
+      - HF_HUB_ENABLE_HF_TRANSFER=0
+      - HF_HUB_DISABLE_XET=1
+    volumes:
+      - ${HOST_HOME:-.}/.cache/huggingface:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; r=urllib.request.urlopen('http://localhost:8004/health'); import json; d=json.loads(r.read()); exit(0 if d.get('loaded') else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 120
+      start_period: 1800s

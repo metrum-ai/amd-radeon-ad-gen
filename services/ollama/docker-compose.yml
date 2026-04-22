@@ -1,0 +1,38 @@
+# Created by Metrum AI for AMD
+
+services:
+  ollama:
+    image: ollama/ollama:rocm
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=12.0.1
+      - HIP_VISIBLE_DEVICES=${OLLAMA_GPU_ID:-0}
+      - OLLAMA_FLASH_ATTENTION=1
+      - OLLAMA_NUM_PARALLEL=3
+      - OLLAMA_KEEP_ALIVE=-1
+      - OLLAMA_KV_CACHE_TYPE=q8_0
+    volumes:
+      - ${HOST_HOME:-.}/.ollama:/root/.ollama
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        ollama serve &
+        until ollama list > /dev/null 2>&1; do sleep 2; done
+        echo "Ollama ready, pulling model..."
+        ollama pull qwen3:8b
+        echo "Creating optimized model variant..."
+        echo -e "FROM qwen3:8b\nPARAMETER num_ctx 4096" > /tmp/Modelfile
+        ollama create qwen3-fast -f /tmp/Modelfile
+        echo "Warming up model (preload into GPU)..."
+        echo "" | ollama run qwen3-fast
+        echo "Model loaded and pinned to GPU, serving..."
+        wait
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list | grep -q qwen3"]
+      interval: 30s
+      timeout: 10s
+      retries: 15
+      start_period: 600s

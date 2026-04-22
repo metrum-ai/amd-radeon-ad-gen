@@ -1,0 +1,14 @@
+/* Created by Metrum AI for AMD */
+
+.brief-details{margin-bottom:16px;}
+.brief-details__fieldBlock{margin-bottom:20px;}
+.brief-details__chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.brief-details__chip{cursor:pointer;transition:all .15s ease;}
+.brief-details__customChip{display:flex;align-items:center;gap:8px;}
+.brief-details__customToneRow{display:flex;gap:8px;margin-bottom:20px;}
+.brief-details__customToneInput{flex:1;min-height:auto;}
+.brief-details__addTone{display:flex;align-items:center;cursor:pointer;}
+.brief-details__refPreview{overflow:hidden;}
+.brief-details__refPreviewFooter{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;}
+.brief-details__refActions{display:flex;gap:8px;}
+.brief-details__uploadBox{text-align:center;cursor:pointer;transition:border-color .2s ease,background .2s ease;}
