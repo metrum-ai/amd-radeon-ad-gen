@@ -6,10 +6,10 @@ import html
 import logging
 import re
 import uuid
-import defusedxml.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import quote_plus
 
+import defusedxml.ElementTree as ET
 import httpx
 from app.config import settings
 from app.db.models import Campaign, CircanaData
@@ -601,7 +601,7 @@ def fetch_market_data_payload(campaign) -> dict:
         "community": community,
         "reddit": community,
         "track_signals": track_signals,
-        "fetched_at": datetime.utcnow().isoformat(),
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
     }
 
 

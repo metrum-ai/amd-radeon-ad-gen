@@ -1,5 +1,6 @@
 # Created by Metrum AI for AMD
 
+
 def build_strategy_prompt(
     campaign, market_context: str = ""
 ) -> tuple[str, str]:
@@ -39,3 +40,64 @@ Do not assume or invent details about the product that are not in the brief."""
         )
 
     return system_prompt, user_prompt
+
+
+def strategy_response_format() -> dict:
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "strategy",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": [
+                    "campaign_direction",
+                    "audience_segments",
+                    "platform_strategy",
+                    "track_recommendations",
+                    "messaging_angles",
+                ],
+                "properties": {
+                    "campaign_direction": {"type": "string"},
+                    "audience_segments": {
+                        "type": "array",
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": [
+                                "name",
+                                "demographics",
+                                "platforms",
+                                "rationale",
+                            ],
+                            "properties": {
+                                "name": {"type": "string"},
+                                "demographics": {"type": "string"},
+                                "platforms": {"type": "string"},
+                                "rationale": {"type": "string"},
+                            },
+                        },
+                    },
+                    "platform_strategy": {"type": "object"},
+                    "track_recommendations": {"type": "object"},
+                    "messaging_angles": {
+                        "type": "array",
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": ["angle", "description"],
+                            "properties": {
+                                "angle": {"type": "string"},
+                                "description": {"type": "string"},
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }

@@ -1,3 +1,12 @@
+# Release v1.1
+
+## Updates
+
+* **OpenClaw Integration**: Strategy generation is routed through OpenClaw (OpenAI-compatible gateway) in front of the local Ollama model.
+* **Structured JSON Reliability**: Added per-module handling for structured outputs.
+
+---
+
 # Release v1.0
 
 ## Features

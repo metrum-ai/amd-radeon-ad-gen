@@ -14,13 +14,19 @@ from app.db.models import (
     CopyVariant,
     ScenePrompt,
 )
+from app.services.phase1_llm import (
+    run_openclaw_then_direct_llm,
+    validate_audio_result,
+    validate_copy_result,
+    validate_scene_result,
+    validate_strategy_result,
+)
 from app.workers.celery_app import celery
 from app.workers.tasks.utils import (
     SyncSession,
     complete_run,
     fail_campaign,
     get_or_create_prompt_config,
-    run_async,
     store_llm_response,
     structured_error,
     track_run,
@@ -41,13 +47,15 @@ def generate_strategy(
     self: Task, campaign_id: str, market_data_enabled: bool = False
 ) -> str:
     """Run the LLM to produce a campaign strategy."""
-    from app.providers.factory import get_llm_provider
     from app.services.market_data import (
         build_market_context,
         fetch_market_data_payload,
         store_market_data,
     )
-    from app.services.prompts.strategy import build_strategy_prompt
+    from app.services.prompts.strategy import (
+        build_strategy_prompt,
+        strategy_response_format,
+    )
 
     t0 = time.monotonic()
     with SyncSession() as db:
@@ -55,7 +63,6 @@ def generate_strategy(
         try:
             campaign = db.get(Campaign, uuid.UUID(campaign_id))
             pc = get_or_create_prompt_config(db, campaign_id)
-            provider = get_llm_provider()
             market_context = ""
             if market_data_enabled:
                 payload = fetch_market_data_payload(campaign)
@@ -65,7 +72,12 @@ def generate_strategy(
             system_prompt, user_prompt = build_strategy_prompt(
                 campaign, market_context=market_context
             )
-            result = run_async(provider.chat(system_prompt, user_prompt))
+            result = run_openclaw_then_direct_llm(
+                system_prompt,
+                user_prompt,
+                strategy_response_format(),
+                validate_strategy_result,
+            )
 
             store_llm_response(db, campaign_id, pc.id, "strategy", result)
 
@@ -106,12 +118,14 @@ def generate_strategy(
 )
 def generate_copy(self: Task, campaign_id: str) -> str:
     """Run the LLM to produce copy variants for all frameworks."""
-    from app.providers.factory import get_llm_provider
     from app.services.market_data import (
         build_market_context,
         latest_market_data,
     )
-    from app.services.prompts.copy import build_copy_prompt
+    from app.services.prompts.copy import (
+        build_copy_prompt,
+        copy_response_format,
+    )
 
     t0 = time.monotonic()
     with SyncSession() as db:
@@ -125,7 +139,6 @@ def generate_copy(self: Task, campaign_id: str) -> str:
                 )
             ).scalar_one()
 
-            provider = get_llm_provider()
             market_row = latest_market_data(db, campaign_id)
             system_prompt, user_prompt = build_copy_prompt(
                 campaign,
@@ -134,7 +147,12 @@ def generate_copy(self: Task, campaign_id: str) -> str:
                     market_row.market_data if market_row else None
                 ),
             )
-            result = run_async(provider.chat(system_prompt, user_prompt))
+            result = run_openclaw_then_direct_llm(
+                system_prompt,
+                user_prompt,
+                copy_response_format(),
+                validate_copy_result,
+            )
 
             store_llm_response(db, campaign_id, pc.id, "copy_gen", result)
 
@@ -186,12 +204,14 @@ def generate_copy(self: Task, campaign_id: str) -> str:
 def generate_scene_prompts(self: Task, campaign_id: str) -> str:
     """Run the LLM to produce image and video scene prompts."""
     from app.providers.base import sanitize_video_prompt
-    from app.providers.factory import get_llm_provider
     from app.services.market_data import (
         build_market_context,
         latest_market_data,
     )
-    from app.services.prompts.scenes import build_scene_prompt
+    from app.services.prompts.scenes import (
+        build_scene_prompt,
+        scene_response_format,
+    )
 
     t0 = time.monotonic()
     with SyncSession() as db:
@@ -205,7 +225,6 @@ def generate_scene_prompts(self: Task, campaign_id: str) -> str:
                 )
             ).scalar_one()
 
-            provider = get_llm_provider()
             market_row = latest_market_data(db, campaign_id)
             system_prompt, user_prompt = build_scene_prompt(
                 campaign,
@@ -214,7 +233,12 @@ def generate_scene_prompts(self: Task, campaign_id: str) -> str:
                     market_row.market_data if market_row else None
                 ),
             )
-            result = run_async(provider.chat(system_prompt, user_prompt))
+            result = run_openclaw_then_direct_llm(
+                system_prompt,
+                user_prompt,
+                scene_response_format(),
+                validate_scene_result,
+            )
 
             store_llm_response(db, campaign_id, pc.id, "scene_gen", result)
 
@@ -256,12 +280,14 @@ def generate_scene_prompts(self: Task, campaign_id: str) -> str:
 )
 def generate_audio_scripts(self: Task, campaign_id: str) -> str:
     """Run the LLM to produce TTS audio scripts."""
-    from app.providers.factory import get_llm_provider
     from app.services.market_data import (
         build_market_context,
         latest_market_data,
     )
-    from app.services.prompts.scenes import build_audio_script_prompt
+    from app.services.prompts.scenes import (
+        audio_script_response_format,
+        build_audio_script_prompt,
+    )
 
     t0 = time.monotonic()
     with SyncSession() as db:
@@ -284,7 +310,6 @@ def generate_audio_scripts(self: Task, campaign_id: str) -> str:
                 .all()
             )
 
-            provider = get_llm_provider()
             market_row = latest_market_data(db, campaign_id)
             system_prompt, user_prompt = build_audio_script_prompt(
                 campaign,
@@ -294,7 +319,12 @@ def generate_audio_scripts(self: Task, campaign_id: str) -> str:
                     market_row.market_data if market_row else None
                 ),
             )
-            result = run_async(provider.chat(system_prompt, user_prompt))
+            result = run_openclaw_then_direct_llm(
+                system_prompt,
+                user_prompt,
+                audio_script_response_format(),
+                validate_audio_result,
+            )
 
             store_llm_response(
                 db, campaign_id, pc.id, "audio_script_gen", result

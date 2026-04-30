@@ -60,6 +60,8 @@ const GenerateScreen = ({ onNewCampaign }) => {
   const [getExports] = useLazyGetExportsQuery();
   const pipelineStatus = normalizePipelineStatus(pipelineStatusData);
   const phase = campaign?.status || "brief";
+  const llmModel = campaign?.metrics?.llm?.model || "";
+  const isOpenClaw = /openclaw/i.test(llmModel);
 
   const done = phase === "completed";
   const isGenerating = phase === "generation_running";
@@ -156,6 +158,18 @@ const GenerateScreen = ({ onNewCampaign }) => {
           <T s={22} w={700}>
             {done ? "Campaign Ready" : isFailed ? "Generation Failed" : isGenerating ? "Generating Campaign Assets" : generationQueued ? "Generation Queued" : "Generation Not Started"}
           </T>
+          {isOpenClaw && (
+            <Box style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
+              <img
+                src="/assets/openclaw.png"
+                alt="OpenClaw"
+                width={14}
+                height={14}
+                style={{ display: "block", objectFit: "contain", filter: "invert(1) hue-rotate(180deg)" }}
+              />
+              <T s={11} c={C.muted} w={600}>OpenClaw used for LLM generation</T>
+            </Box>
+          )}
         </Box>
 
         {/* Pipeline chips (fills the middle) */}

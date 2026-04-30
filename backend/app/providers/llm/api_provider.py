@@ -142,6 +142,20 @@ class APILLMProvider(LLMProvider):
         self._api_key = settings.llm_api_key
         self._model = settings.llm_model
 
+    def _extra_headers(self) -> dict:
+        """Override in subclasses to inject additional HTTP headers."""
+        return {}
+
+    def _underlying_model(self) -> str:
+        """The actual LLM model name, used for prompt adjustments like /no_think.
+        Subclasses may override when the model sent in the payload differs
+        from the real model running inference (e.g. OpenClaw gateway)."""
+        return self._model
+
+    def _supports_response_format(self) -> bool:
+        """Whether the upstream supports OpenAI-style response_format."""
+        return False
+
     async def chat(
         self,
         system_prompt: str,
@@ -149,7 +163,7 @@ class APILLMProvider(LLMProvider):
         response_format: dict | None = None,
     ) -> LLMResult:
         sys_content = system_prompt
-        if "qwen3" in self._model.lower():
+        if "qwen3" in self._underlying_model().lower():
             sys_content += "\n\n/no_think"
 
         payload: dict = {
@@ -161,10 +175,13 @@ class APILLMProvider(LLMProvider):
             "temperature": 0.4,
             "max_tokens": 2048,
         }
+        if response_format is not None and self._supports_response_format():
+            payload["response_format"] = response_format
 
         headers = {
             "Authorization": f"Bearer {self._api_key}",
             "Content-Type": "application/json",
+            **self._extra_headers(),
         }
 
         t0 = time.monotonic()

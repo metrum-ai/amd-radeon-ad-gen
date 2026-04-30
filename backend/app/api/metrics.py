@@ -60,10 +60,7 @@ async def get_gpu_history(
 ):
     """Return GPU metrics for the last N minutes."""
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=minutes)
-    stmt = (
-        select(*_GPU_HISTORY_COLS)
-        .where(GpuMetric.recorded_at > cutoff)
-    )
+    stmt = select(*_GPU_HISTORY_COLS).where(GpuMetric.recorded_at > cutoff)
     if gpu_index is not None:
         stmt = stmt.where(GpuMetric.gpu_index == gpu_index)
     stmt = stmt.order_by(GpuMetric.recorded_at.desc()).limit(1000)

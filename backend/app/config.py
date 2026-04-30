@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     image_model_name: str = "FLUX.1-schnell"
 
     # TTS provider
-    tts_api_url: str = "http://kokoro-tts:8003"
+    tts_api_url: str = "http://kokoro-tts:8880"
 
     # Video provider
     video_api_url: str = ""
@@ -49,8 +49,13 @@ class Settings(BaseSettings):
     # Local provider URLs (used when provider_mode is "local")
     local_llm_url: str = "http://ollama:11434/v1"
     local_image_url: str = "http://flux-server:8002"
-    local_tts_url: str = "http://kokoro-tts:8003"
+    local_tts_url: str = "http://kokoro-tts:8880"
     local_video_url: str = "http://ltx-video:8004"
+
+    # OpenClaw gateway (used when llm_provider_mode is "openclaw")
+    openclaw_gateway_url: str = "http://openclaw:18789/v1"
+    openclaw_api_key: str = ""
+    openclaw_agent_id: str = "main"
 
     cors_origins: list[str] = [
         "http://localhost:3000",

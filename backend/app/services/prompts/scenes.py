@@ -108,6 +108,50 @@ Make the brand palette visually dominant in the final image."""
     return system_prompt, user_prompt
 
 
+def scene_response_format() -> dict:
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "scene_gen",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["scene_prompts"],
+                "properties": {
+                    "scene_prompts": {
+                        "type": "array",
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": [
+                                "scene_type",
+                                "image_prompt",
+                                "video_script",
+                            ],
+                            "properties": {
+                                "scene_type": {
+                                    "type": "string",
+                                    "enum": ["primary", "lifestyle", "mood"],
+                                },
+                                "image_prompt": {"type": "string"},
+                                "video_script": {
+                                    "anyOf": [
+                                        {"type": "string"},
+                                        {"type": "null"},
+                                    ]
+                                },
+                            },
+                        },
+                    }
+                },
+            },
+        },
+    }
+
+
 def build_audio_script_prompt(
     campaign, strategy, copy_variants, market_context: str = ""
 ) -> tuple[str, str]:
@@ -146,3 +190,36 @@ Write scripts that sound like a real person talking about something they genuine
         )
 
     return system_prompt, user_prompt
+
+
+def audio_script_response_format() -> dict:
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "audio_script_gen",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["audio_scripts"],
+                "properties": {
+                    "audio_scripts": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": ["tone", "script", "voice", "speed"],
+                            "properties": {
+                                "tone": {"type": "string"},
+                                "script": {"type": "string"},
+                                "voice": {"type": "string"},
+                                "speed": {"type": "number"},
+                            },
+                        },
+                    }
+                },
+            },
+        },
+    }

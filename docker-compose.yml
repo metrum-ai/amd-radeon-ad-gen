@@ -5,6 +5,7 @@ include:
   - ./UI/docker-compose.yml
   - ./metrics/docker-compose.yml
   - ./services/ollama/docker-compose.yml
+  - ./services/openclaw/docker-compose.yml
   - ./services/kokoro-tts/docker-compose.yml
   - ./services/flux-server/docker-compose.yml
   - ./services/ltx-video/docker-compose.yml
@@ -22,4 +23,5 @@ services:
       - prometheus
       - minio
       - ollama
+      - openclaw
       - kokoro-tts

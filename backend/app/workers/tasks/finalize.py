@@ -4,7 +4,7 @@
 
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.db.models import (
     AudioAd,
@@ -129,7 +129,7 @@ def finalize_campaign(self, campaign_id: str) -> str:
                         download_bytes(v.final_url or v.video_url)
 
             campaign.status = "completed"
-            campaign.completed_at = datetime.utcnow()
+            campaign.completed_at = datetime.now(timezone.utc)
             complete_run(db, run, t0)
         except Exception as exc:
             fail_campaign(db, campaign_id, str(exc))
@@ -144,7 +144,9 @@ def finalize_campaign(self, campaign_id: str) -> str:
 )
 def cleanup_stuck_campaigns() -> dict:
     """Periodic task: find campaigns stuck in *_running for too long and fail them."""
-    cutoff = datetime.utcnow() - timedelta(minutes=STUCK_THRESHOLD_MINUTES)
+    cutoff = datetime.now(timezone.utc) - timedelta(
+        minutes=STUCK_THRESHOLD_MINUTES
+    )
     cleaned = 0
 
     with SyncSession() as db:

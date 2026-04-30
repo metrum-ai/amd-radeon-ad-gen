@@ -2,9 +2,6 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from app.api import (
     assets,
     brands,
@@ -16,6 +13,8 @@ from app.api import (
 )
 from app.config import settings
 from app.services.minio_client import ensure_bucket
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager

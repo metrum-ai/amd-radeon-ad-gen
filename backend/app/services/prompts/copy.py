@@ -1,5 +1,6 @@
 # Created by Metrum AI for AMD
 
+
 def build_copy_prompt(
     campaign, strategy, market_context: str = ""
 ) -> tuple[str, str]:
@@ -40,3 +41,95 @@ Use ONLY product details from the brief above."""
         )
 
     return system_prompt, user_prompt
+
+
+def copy_response_format() -> dict:
+    """JSON schema enforcement for OpenAI-compatible response_format."""
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "copy_gen",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["copy_variants"],
+                "properties": {
+                    "copy_variants": {
+                        "type": "array",
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": [
+                                "framework",
+                                "headline",
+                                "body",
+                                "cta",
+                                "hashtags",
+                                "platform_versions",
+                            ],
+                            "properties": {
+                                "framework": {
+                                    "type": "string",
+                                    "enum": ["AIDA", "PAS", "BAB"],
+                                },
+                                "headline": {"type": "string"},
+                                "body": {"type": "string"},
+                                "cta": {"type": "string"},
+                                "hashtags": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "minItems": 1,
+                                },
+                                "platform_versions": {
+                                    "type": "object",
+                                    "additionalProperties": False,
+                                    "required": [
+                                        "meta",
+                                        "google_ads",
+                                        "linkedin",
+                                    ],
+                                    "properties": {
+                                        "meta": {
+                                            "type": "object",
+                                            "additionalProperties": False,
+                                            "required": ["headline", "body"],
+                                            "properties": {
+                                                "headline": {"type": "string"},
+                                                "body": {"type": "string"},
+                                            },
+                                        },
+                                        "google_ads": {
+                                            "type": "object",
+                                            "additionalProperties": False,
+                                            "required": [
+                                                "headline",
+                                                "description",
+                                            ],
+                                            "properties": {
+                                                "headline": {"type": "string"},
+                                                "description": {
+                                                    "type": "string"
+                                                },
+                                            },
+                                        },
+                                        "linkedin": {
+                                            "type": "object",
+                                            "additionalProperties": False,
+                                            "required": ["headline", "body"],
+                                            "properties": {
+                                                "headline": {"type": "string"},
+                                                "body": {"type": "string"},
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    }
+                },
+            },
+        },
+    }

@@ -25,7 +25,19 @@ def _require_local(mode: str, name: str) -> None:
 def get_llm_provider() -> LLMProvider:
     """Instantiate the configured LLM provider."""
     mode = _effective_mode(settings.llm_provider_mode)
+    if mode == "openclaw":
+        from app.providers.llm.openclaw_provider import OpenClawLLMProvider
+
+        return OpenClawLLMProvider()
     _require_local(mode, "llm_provider_mode")
+    from app.providers.llm.local_provider import LocalLLMProvider
+
+    return LocalLLMProvider()
+
+
+def get_local_llm_provider() -> LLMProvider:
+    """Direct Ollama (OpenAI-compatible) -- used for hard fallback when OpenClaw
+    does not return parseable/valid structured output."""
     from app.providers.llm.local_provider import LocalLLMProvider
 
     return LocalLLMProvider()

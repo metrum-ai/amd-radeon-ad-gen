@@ -201,6 +201,7 @@ def _fit_text_sizes(
     """Iteratively shrink headline/body font sizes until everything fits
     within avail_h pixels. Returns (headline_size, headline_lines,
     body_size, body_lines)."""
+
     def gap_headline_body(hs):
         return int(hs * 0.4)
 

@@ -11,7 +11,7 @@ has data to display.
 import logging
 import random  # nosec B311
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 from app.config import settings
@@ -64,13 +64,16 @@ class SimulatedGpuState:
             ),
         )
         self.gpu_util_pct = max(
-            0, min(100, self.gpu_util_pct + random.uniform(-5, 5))  # nosec B311
+            0,
+            min(100, self.gpu_util_pct + random.uniform(-5, 5)),  # nosec B311
         )
         self.power_watts = max(
-            30, min(300, self.power_watts + random.uniform(-8, 8))  # nosec B311
+            30,
+            min(300, self.power_watts + random.uniform(-8, 8)),  # nosec B311
         )
         self.temp_celsius = max(
-            30, min(95, self.temp_celsius + random.uniform(-2, 2))  # nosec B311
+            30,
+            min(95, self.temp_celsius + random.uniform(-2, 2)),  # nosec B311
         )
         return {
             "vram_used_mb": self.vram_used_mb,
@@ -84,7 +87,7 @@ class SimulatedGpuState:
 def generate_simulated(gpu_states: list[SimulatedGpuState]):
     """Write one tick of simulated data to PostgreSQL."""
     with SyncSession() as db:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for state in gpu_states:
             db.add(
                 GpuMetric(
@@ -139,7 +142,7 @@ def scrape_and_store():
         return False  # signal: no real data
 
     with SyncSession() as db:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for gpu_idx, metrics in gpu_data.items():
             db.add(
                 GpuMetric(

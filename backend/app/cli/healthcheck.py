@@ -47,12 +47,16 @@ async def check_postgres() -> bool:
 
         engine = create_async_engine(settings.database_url)
         async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))  # nosemgrep: avoid-sqlalchemy-text
+            await conn.execute(
+                text("SELECT 1")
+            )  # nosemgrep: avoid-sqlalchemy-text
         await engine.dispose()
         print(f"  [OK] PostgreSQL: {_redact_url(settings.database_url)}")
         return True
     except Exception as exc:
-        print(f"  [FAIL] PostgreSQL: {_redact_url(settings.database_url)} -- {exc}")
+        print(
+            f"  [FAIL] PostgreSQL: {_redact_url(settings.database_url)} -- {exc}"
+        )
         return False
 
 
@@ -110,14 +114,25 @@ async def main():
     results.append(await check_http("Video (LTX)", video_health))
 
     print("\nProviders:")
-    results.append(
-        await check_http("LLM (local)", f"{settings.local_llm_url}/health")
-    )
+    llm_mode = settings.llm_provider_mode or settings.provider_mode
+    if llm_mode == "openclaw":
+        gw_url = settings.openclaw_gateway_url.rstrip("/")
+        results.append(
+            await check_http("OpenClaw Gateway", f"{gw_url}/models")
+        )
+        results.append(
+            await check_http(
+                "LLM via Ollama (behind OpenClaw)",
+                f"{settings.local_llm_url}/health",
+            )
+        )
+    else:
+        results.append(
+            await check_http("LLM (local)", f"{settings.local_llm_url}/health")
+        )
 
     results.append(
-        await check_http(
-            "Image (local)", f"{settings.local_image_url}/health"
-        )
+        await check_http("Image (local)", f"{settings.local_image_url}/health")
     )
 
     print()

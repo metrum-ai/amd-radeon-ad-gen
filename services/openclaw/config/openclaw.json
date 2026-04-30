@@ -1,0 +1,77 @@
+{
+  "agents": {
+    "defaults": {
+      "workspace": "/home/node/.openclaw/workspace",
+      "model": {
+        "primary": "ollama/qwen3:8b"
+      },
+      "skills": [],
+      "thinkingDefault": "off",
+      "skipBootstrap": true,
+      "startupContext": {
+        "enabled": false
+      },
+      "memorySearch": {
+        "enabled": false
+      },
+      "contextInjection": "continuation-skip",
+      "bootstrapMaxChars": 1,
+      "bootstrapTotalMaxChars": 1
+    },
+    "list": [
+      { "id": "main", "default": true }
+    ]
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "ollama": {
+        "baseUrl": "http://ollama:11434/v1",
+        "apiKey": "",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "qwen3:8b",
+            "name": "Qwen3 8B",
+            "reasoning": true,
+            "input": ["text"],
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "contextWindow": 32768,
+            "maxTokens": 8192,
+            "compat": {
+              "supportsDeveloperRole": false,
+              "supportsReasoningEffort": false
+            }
+          }
+        ]
+      }
+    }
+  },
+  "gateway": {
+    "port": 18789,
+    "auth": {
+      "mode": "token",
+      "token": "adgen-openclaw-internal"
+    },
+    "http": {
+      "endpoints": {
+        "chatCompletions": { "enabled": true }
+      }
+    }
+  },
+  "plugins": {
+    "allow": ["ollama"],
+    "deny": ["acpx", "browser", "device-pair", "phone-control", "talk-voice"]
+  },
+  "tools": {
+    "profile": "minimal",
+    "allow": [],
+    "deny": ["exec", "process", "browser", "canvas", "write", "edit", "apply_patch", "read"]
+  },
+  "session": {
+    "reset": {
+      "mode": "idle",
+      "idleMinutes": 5
+    }
+  }
+}

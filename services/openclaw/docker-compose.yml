@@ -1,0 +1,29 @@
+# Created by Metrum AI for AMD
+
+services:
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:latest
+    user: "0:0"
+    volumes:
+      - ./config/openclaw.json:/tmp/openclaw-seed.json:ro
+      - openclaw-home:/home/node/.openclaw
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        chown node:node /home/node/.openclaw
+        cp /tmp/openclaw-seed.json /home/node/.openclaw/openclaw.json
+        chown node:node /home/node/.openclaw/openclaw.json
+        exec su -s /bin/sh node -c "node openclaw.mjs gateway --allow-unconfigured"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:18789/v1/models -H 'Authorization: Bearer adgen-openclaw-internal' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  openclaw-home:

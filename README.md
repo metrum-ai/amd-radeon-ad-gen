@@ -453,6 +453,10 @@ See `.env.example` for all available configuration. Key settings:
 | APP_LLM_PROVIDER_MODE | local | LLM provider mode (local-only) |
 | APP_VIDEO_PROVIDER_MODE | local | Video provider mode (local-only) |
 
+### OpenClaw Integration (LLM Routing)
+
+Strategy generation is integrated with **OpenClaw** as an OpenAI-compatible gateway serving the local Ollama model. When `APP_LLM_PROVIDER_MODE=openclaw`, the backend routes structured LLM requests through the OpenClaw gateway (`APP_OPENCLAW_GATEWAY_URL`) using `APP_OPENCLAW_API_KEY` and `APP_OPENCLAW_AGENT_ID`.
+
 ### Database & Storage
 
 | Variable | Default | Description |

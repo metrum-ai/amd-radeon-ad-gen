@@ -86,13 +86,14 @@ def _generate_single_image(self, campaign_id: str, scene_id: str) -> str:
             )
 
             t_gen = time.monotonic()
-            image_bytes = run_async(
-                provider.generate_image(prompt, params)
-            )
+            image_bytes = run_async(provider.generate_image(prompt, params))
             gen_ms = int((time.monotonic() - t_gen) * 1000)
 
             asset_url = upload_bytes(
-                image_bytes, campaign_id, "images", "png",
+                image_bytes,
+                campaign_id,
+                "images",
+                "png",
             )
             db.add(
                 GeneratedImage(
@@ -110,12 +111,16 @@ def _generate_single_image(self, campaign_id: str, scene_id: str) -> str:
             db.commit()
             logger.info(
                 "image_gen: scene %s (%s) done in %dms",
-                scene.scene_type, scene_id[:8], gen_ms,
+                scene.scene_type,
+                scene_id[:8],
+                gen_ms,
             )
 
         except Exception as exc:
             logger.error(
-                "image_gen: scene %s failed: %s", scene_id[:8], exc,
+                "image_gen: scene %s failed: %s",
+                scene_id[:8],
+                exc,
             )
             raise self.retry(exc=exc)
 

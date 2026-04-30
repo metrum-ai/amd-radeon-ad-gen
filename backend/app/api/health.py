@@ -44,13 +44,14 @@ async def _check_http(name: str, url: str, timeout: float = 5.0) -> dict:
 
 
 async def _check_postgres() -> dict:
-    from sqlalchemy import text
-
     from app.db.session import engine as async_engine
+    from sqlalchemy import text
 
     try:
         async with async_engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))  # nosemgrep: avoid-sqlalchemy-text
+            await conn.execute(
+                text("SELECT 1")
+            )  # nosemgrep: avoid-sqlalchemy-text
         return {"name": "postgresql", "status": "ok"}
     except Exception as exc:
         return {
@@ -89,6 +90,10 @@ async def provider_health():
         _check_http("video", f"{settings.local_video_url.rstrip('/')}/health"),
     ]
 
+    llm_mode = settings.llm_provider_mode or settings.provider_mode
+    if llm_mode == "openclaw":
+        gw_url = settings.openclaw_gateway_url.rstrip("/")
+        checks.append(_check_http("openclaw", f"{gw_url}/models"))
     checks.append(_check_http("llm", f"{settings.local_llm_url}/health"))
 
     checks.append(_check_http("image", f"{settings.local_image_url}/health"))
@@ -105,8 +110,18 @@ async def provider_health():
 @router.get("/capabilities")
 async def capabilities():
     """Detect available generation tracks by probing local services."""
-    llm_url = f"{settings.local_llm_url.rstrip('/')}/health"
-    llm_up = await _probe(llm_url)
+    llm_mode = settings.llm_provider_mode or settings.provider_mode
+    if llm_mode == "openclaw":
+        gw_url = settings.openclaw_gateway_url.rstrip("/")
+        openclaw_up = await _probe(f"{gw_url}/models")
+        ollama_up = await _probe(
+            f"{settings.local_llm_url.rstrip('/')}/health"
+        )
+        llm_url = f"{gw_url}/models"
+        llm_up = openclaw_up and ollama_up
+    else:
+        llm_url = f"{settings.local_llm_url.rstrip('/')}/health"
+        llm_up = await _probe(llm_url)
     llm_available = llm_up
 
     img_mode = "local"

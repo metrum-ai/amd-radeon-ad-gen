@@ -171,9 +171,7 @@ def load_pipeline() -> AnimateDiffPipeline:
                 logger.info(
                     "Motion LoRA cache miss; downloading from Hugging Face"
                 )
-                pipe.load_lora_weights(
-                    MOTION_LORA, adapter_name="motion_lora"
-                )
+                pipe.load_lora_weights(MOTION_LORA, adapter_name="motion_lora")
             pipe.set_adapters(
                 ["motion_lora"], adapter_weights=[MOTION_LORA_STRENGTH]
             )

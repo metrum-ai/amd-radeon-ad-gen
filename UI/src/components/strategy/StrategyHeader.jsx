@@ -5,6 +5,8 @@ import { Box, T, Badge } from "../primitives";
 import "../../css/strategy/StrategyHeader.css";
 
 export default function StrategyHeader({ campaign, isLoading, isFailed, elapsed }) {
+  const llmModel = campaign?.metrics?.llm?.model || "";
+  const isOpenClaw = /openclaw/i.test(llmModel);
   return (
     <Box className="strategy-header">
       <Box className="strategy-header__titleBlock">
@@ -13,6 +15,21 @@ export default function StrategyHeader({ campaign, isLoading, isFailed, elapsed 
           {isLoading ? "AI is generating your strategy..." : "Review AI output. Edit anything before approving."}
         </T>
       </Box>
+      {isOpenClaw && (
+        <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Box style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", background: C.elevated, border: `1px solid ${C.border}`, borderRadius: radius.md }}>
+            <img
+              src="/assets/openclaw.png"
+              alt="OpenClaw"
+              width={14}
+              height={14}
+              style={{ display: "block", objectFit: "contain", filter: "invert(1) hue-rotate(180deg)" }}
+            />
+            <T s={11} w={700}>OpenClaw</T>
+            <T s={10} c={C.dim}>used for LLM generation</T>
+          </Box>
+        </Box>
+      )}
       {campaign?.metrics?.llm && (
         <Box className="strategy-header__metrics" style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: radius.md }}>
           <Box className="strategy-header__metricCell">
