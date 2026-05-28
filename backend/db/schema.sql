@@ -1,3 +1,7 @@
+-- Copyright Advanced Micro Devices, Inc.
+--
+-- SPDX-License-Identifier: MIT
+
 -- AI Ad Campaign Pipeline - Database Schema
 -- PostgreSQL 16+
 -- 3-Track Architecture: Image+Text, Audio/Podcast, Video
@@ -86,20 +90,7 @@ CREATE TABLE prompt_configs (
 );
 
 -- ============================================================
--- 5. circana_data (market data injection)
--- ============================================================
-CREATE TABLE circana_data (
-    id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    campaign_id      uuid NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
-    product_category text NOT NULL,
-    market_data      jsonb NOT NULL DEFAULT '{}',
-    fetched_at       timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_circana_campaign ON circana_data(campaign_id);
-
--- ============================================================
--- 6. llm_responses (raw LLM audit log)
+-- 5. llm_responses (raw LLM audit log)
 -- ============================================================
 CREATE TABLE llm_responses (
     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -117,7 +108,7 @@ CREATE TABLE llm_responses (
 CREATE INDEX idx_llm_responses_campaign ON llm_responses(campaign_id);
 
 -- ============================================================
--- 7. campaign_strategy (LLM creative direction)
+-- 6. campaign_strategy (LLM creative direction)
 -- ============================================================
 CREATE TABLE campaign_strategy (
     id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -128,8 +119,7 @@ CREATE TABLE campaign_strategy (
     platform_strategy       jsonb NOT NULL DEFAULT '{}',
     track_recommendations   jsonb NOT NULL DEFAULT '{}',
     messaging_angles        jsonb NOT NULL DEFAULT '[]',
-    created_at              timestamptz NOT NULL DEFAULT now(),
-    market_data_used        boolean
+    created_at              timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_campaign_strategy_campaign ON campaign_strategy(campaign_id);
@@ -276,7 +266,8 @@ CREATE TABLE pipeline_runs (
                         'strategy','copy_gen','scene_gen',
                         'image_gen','quality_gate',
                         'composition','social_mockups',
-                        'audio_gen','video_gen','video_mux',
+                        'audio_script_gen','audio_gen',
+                        'video_gen','video_mux',
                         'finalize','export'
                     )),
     status           text NOT NULL DEFAULT 'running'

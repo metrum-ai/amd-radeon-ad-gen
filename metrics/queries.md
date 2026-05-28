@@ -1,4 +1,5 @@
-<!-- Created by Metrum AI for AMD -->
+<!-- Copyright Advanced Micro Devices, Inc. -->
+<!-- SPDX-License-Identifier: MIT -->
 
 # Prometheus Queries
 

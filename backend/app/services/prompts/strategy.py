@@ -1,9 +1,9 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 
-def build_strategy_prompt(
-    campaign, market_context: str = ""
-) -> tuple[str, str]:
+def build_strategy_prompt(campaign) -> tuple[str, str]:
     """Build the system and user prompts for strategy generation."""
     system_prompt = """Senior advertising strategist. Output valid JSON:
 
@@ -31,13 +31,6 @@ RULES:
 
 Base your entire strategy on the information above.
 Do not assume or invent details about the product that are not in the brief."""
-    if market_context:
-        user_prompt += (
-            "\n\nOptional market context from live signals "
-            "(use only when relevant, do not turn it into unsupported claims). "
-            "Use any track-fit summary here directly when deciding track_recommendations:\n"
-            f"{market_context}"
-        )
 
     return system_prompt, user_prompt
 

@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 """Phase 1 Celery tasks: LLM-driven strategy, copy, scene prompts,
 and audio script generation. Each task reads from PostgreSQL, calls
@@ -43,15 +45,8 @@ from sqlalchemy import select
     name="app.workers.tasks.strategy.generate_strategy",
     queue="strategy",
 )
-def generate_strategy(
-    self: Task, campaign_id: str, market_data_enabled: bool = False
-) -> str:
+def generate_strategy(self: Task, campaign_id: str) -> str:
     """Run the LLM to produce a campaign strategy."""
-    from app.services.market_data import (
-        build_market_context,
-        fetch_market_data_payload,
-        store_market_data,
-    )
     from app.services.prompts.strategy import (
         build_strategy_prompt,
         strategy_response_format,
@@ -63,15 +58,8 @@ def generate_strategy(
         try:
             campaign = db.get(Campaign, uuid.UUID(campaign_id))
             pc = get_or_create_prompt_config(db, campaign_id)
-            market_context = ""
-            if market_data_enabled:
-                payload = fetch_market_data_payload(campaign)
-                store_market_data(db, campaign_id, campaign, payload)
-                market_context = build_market_context(payload)
 
-            system_prompt, user_prompt = build_strategy_prompt(
-                campaign, market_context=market_context
-            )
+            system_prompt, user_prompt = build_strategy_prompt(campaign)
             result = run_openclaw_then_direct_llm(
                 system_prompt,
                 user_prompt,
@@ -90,7 +78,6 @@ def generate_strategy(
                 platform_strategy=data.get("platform_strategy", {}),
                 track_recommendations=data.get("track_recommendations", {}),
                 messaging_angles=data.get("messaging_angles", []),
-                market_data_used=market_data_enabled,
             )
             db.add(strategy)
             db.commit()
@@ -118,10 +105,6 @@ def generate_strategy(
 )
 def generate_copy(self: Task, campaign_id: str) -> str:
     """Run the LLM to produce copy variants for all frameworks."""
-    from app.services.market_data import (
-        build_market_context,
-        latest_market_data,
-    )
     from app.services.prompts.copy import (
         build_copy_prompt,
         copy_response_format,
@@ -139,13 +122,8 @@ def generate_copy(self: Task, campaign_id: str) -> str:
                 )
             ).scalar_one()
 
-            market_row = latest_market_data(db, campaign_id)
             system_prompt, user_prompt = build_copy_prompt(
-                campaign,
-                strategy,
-                market_context=build_market_context(
-                    market_row.market_data if market_row else None
-                ),
+                campaign, strategy
             )
             result = run_openclaw_then_direct_llm(
                 system_prompt,
@@ -204,10 +182,6 @@ def generate_copy(self: Task, campaign_id: str) -> str:
 def generate_scene_prompts(self: Task, campaign_id: str) -> str:
     """Run the LLM to produce image and video scene prompts."""
     from app.providers.base import sanitize_video_prompt
-    from app.services.market_data import (
-        build_market_context,
-        latest_market_data,
-    )
     from app.services.prompts.scenes import (
         build_scene_prompt,
         scene_response_format,
@@ -225,13 +199,8 @@ def generate_scene_prompts(self: Task, campaign_id: str) -> str:
                 )
             ).scalar_one()
 
-            market_row = latest_market_data(db, campaign_id)
             system_prompt, user_prompt = build_scene_prompt(
-                campaign,
-                strategy,
-                market_context=build_market_context(
-                    market_row.market_data if market_row else None
-                ),
+                campaign, strategy
             )
             result = run_openclaw_then_direct_llm(
                 system_prompt,
@@ -280,10 +249,6 @@ def generate_scene_prompts(self: Task, campaign_id: str) -> str:
 )
 def generate_audio_scripts(self: Task, campaign_id: str) -> str:
     """Run the LLM to produce TTS audio scripts."""
-    from app.services.market_data import (
-        build_market_context,
-        latest_market_data,
-    )
     from app.services.prompts.scenes import (
         audio_script_response_format,
         build_audio_script_prompt,
@@ -291,7 +256,7 @@ def generate_audio_scripts(self: Task, campaign_id: str) -> str:
 
     t0 = time.monotonic()
     with SyncSession() as db:
-        run = track_run(db, campaign_id, "audio_gen", self.request.id)
+        run = track_run(db, campaign_id, "audio_script_gen", self.request.id)
         try:
             campaign = db.get(Campaign, uuid.UUID(campaign_id))
             pc = get_or_create_prompt_config(db, campaign_id)
@@ -310,14 +275,8 @@ def generate_audio_scripts(self: Task, campaign_id: str) -> str:
                 .all()
             )
 
-            market_row = latest_market_data(db, campaign_id)
             system_prompt, user_prompt = build_audio_script_prompt(
-                campaign,
-                strategy,
-                copy_variants,
-                market_context=build_market_context(
-                    market_row.market_data if market_row else None
-                ),
+                campaign, strategy, copy_variants
             )
             result = run_openclaw_then_direct_llm(
                 system_prompt,

@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 """Provider health-check and capability detection endpoints."""
 
@@ -73,10 +75,10 @@ async def _check_valkey() -> dict:
         return {"name": "valkey", "status": "unreachable", "error": str(exc)}
 
 
-async def _check_minio() -> dict:
+async def _check_storage() -> dict:
     proto = "https" if settings.minio_use_ssl else "http"
-    url = f"{proto}://{settings.minio_endpoint}/minio/health/live"
-    return await _check_http("minio", url)
+    url = f"{proto}://{settings.minio_endpoint}/health"
+    return await _check_http("storage", url)
 
 
 @router.get("/providers")
@@ -85,7 +87,7 @@ async def provider_health():
     checks = [
         _check_postgres(),
         _check_valkey(),
-        _check_minio(),
+        _check_storage(),
         _check_http("tts", f"{settings.tts_api_url}/health"),
         _check_http("video", f"{settings.local_video_url.rstrip('/')}/health"),
     ]

@@ -1,4 +1,6 @@
-// Created by Metrum AI for AMD
+// Copyright Advanced Micro Devices, Inc.
+//
+// SPDX-License-Identifier: MIT
 
 import { C, radius } from "../tokens";
 
@@ -26,11 +28,7 @@ export const textareaStyle = {
 };
 
 export const brandPresets = [
-  { name: "AMD", colors: [{ hex: "#ED1C24", label: "Primary" }, { hex: "#000000", label: "Secondary" }, { hex: "#FFFFFF", label: "Accent" }], fonts: ["Trade Gothic", "Helvetica Neue"] },
-  { name: "Google", colors: [{ hex: "#4285F4", label: "Blue" }, { hex: "#DB4437", label: "Red" }, { hex: "#F4B400", label: "Yellow" }, { hex: "#0F9D58", label: "Green" }], fonts: ["Google Sans", "Roboto"] },
-  { name: "Apple", colors: [{ hex: "#000000", label: "Primary" }, { hex: "#555555", label: "Secondary" }, { hex: "#FFFFFF", label: "Accent" }], fonts: ["SF Pro", "SF Mono"] },
-  { name: "Meta", colors: [{ hex: "#0082FB", label: "Primary" }, { hex: "#1877F2", label: "Secondary" }, { hex: "#FFFFFF", label: "Accent" }], fonts: ["Optimistic Display", "Helvetica Neue"] },
-  { name: "Microsoft", colors: [{ hex: "#F25022", label: "Red" }, { hex: "#7FBA00", label: "Green" }, { hex: "#00A4EF", label: "Blue" }, { hex: "#FFB900", label: "Yellow" }], fonts: ["Segoe UI", "Selawik"] },
+  { name: "AMD", colors: [{ hex: "#ED1C24", label: "Primary" }, { hex: "#000000", label: "Secondary" }, { hex: "#FFFFFF", label: "Accent" }], fonts: ["Arial", "Inter"] },
 ];
 
 export const defaultTones = ["Bold", "Technical", "Aspirational", "Playful", "Premium", "Minimal"];

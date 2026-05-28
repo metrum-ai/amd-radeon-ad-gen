@@ -1,4 +1,6 @@
-// Created by Metrum AI for AMD
+// Copyright Advanced Micro Devices, Inc.
+//
+// SPDX-License-Identifier: MIT
 
 import { C, gradient, shadow, radius } from "../../tokens";
 import { Box, T, Label, Card } from "../primitives";

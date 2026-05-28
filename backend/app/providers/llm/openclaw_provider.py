@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 """OpenClaw LLM provider -- routes chat completions through the OpenClaw
 gateway, which forwards to the configured local Ollama instance."""
@@ -21,7 +23,7 @@ class OpenClawLLMProvider(APILLMProvider):
     def __init__(self) -> None:
         super().__init__()
         self._base_url = settings.openclaw_gateway_url.rstrip("/")
-        self._api_key = settings.openclaw_api_key or "not-needed"
+        self._api_key = settings.openclaw_api_key
         # OpenClaw treats the OpenAI "model" field as an agent target.
         # Be explicit so we avoid config/default routing surprises.
         self._model = f"openclaw/{settings.openclaw_agent_id or 'main'}"

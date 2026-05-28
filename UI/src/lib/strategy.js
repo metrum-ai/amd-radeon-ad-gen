@@ -1,4 +1,6 @@
-// Created by Metrum AI for AMD
+// Copyright Advanced Micro Devices, Inc.
+//
+// SPDX-License-Identifier: MIT
 
 import { C } from "../tokens";
 
@@ -7,7 +9,7 @@ export const TAB_TO_STAGE = {
   audience: "strategy",
   copy: "copy_gen",
   scenes: "scene_gen",
-  audio: "audio_gen",
+  audio: "audio_script_gen",
   tracks: null,
 };
 

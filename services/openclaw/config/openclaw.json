@@ -51,7 +51,7 @@
     "port": 18789,
     "auth": {
       "mode": "token",
-      "token": "adgen-openclaw-internal"
+      "token": "${OPENCLAW_AUTH_TOKEN}"
     },
     "http": {
       "endpoints": {

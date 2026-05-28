@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 """Quality scoring for generated images. Evaluates OCR presence,
 composition safety zones, and image-prompt alignment."""

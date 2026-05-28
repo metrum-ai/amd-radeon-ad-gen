@@ -1,4 +1,6 @@
-// Created by Metrum AI for AMD
+// Copyright Advanced Micro Devices, Inc.
+//
+// SPDX-License-Identifier: MIT
 
 import { C, radius, shadow, gradient } from "../../tokens";
 import { Box, T, Badge, Card } from "../primitives";
@@ -20,14 +22,9 @@ export default function StrategyTabContent({
   tab, strategyReady, copyReady, scenesReady, audioReady, strategy, messagingAngles, audiences, copyVariants, scenes, audioAds, tracks, setTracks, hwAllowed, hwCaps,
 }) {
   const tr = strategy?.track_recommendations || {};
-  const showTrackRec =
-    strategy?.market_data_used !== false;
-  const recImg =
-    showTrackRec && isTrackRecommended(tr.image_text);
-  const recAudio =
-    showTrackRec && isTrackRecommended(tr.audio_podcast);
-  const recVideo =
-    showTrackRec && isTrackRecommended(tr.video);
+  const recImg = isTrackRecommended(tr.image_text);
+  const recAudio = isTrackRecommended(tr.audio_podcast);
+  const recVideo = isTrackRecommended(tr.video);
 
   return (
     <Box className="strategy-tab-content" key={tab}>
@@ -127,7 +124,7 @@ export default function StrategyTabContent({
       {tab === "audio" && (
         <Box className="strategy-tab-content__stack">
           {!audioReady ? [1, 2].map((i) => <Card key={i}><StrategySkeleton h={80} /></Card>) : (
-            (audioAds.length > 0 ? audioAds : []).map((a, i) => {
+            audioAds.length > 0 ? audioAds.map((a, i) => {
               const color = i % 2 === 0 ? C.teal : C.accent;
               return (
                 <Card key={a.id || i} style={{ borderLeft: `3px solid ${color}` }}>
@@ -138,7 +135,14 @@ export default function StrategyTabContent({
                   <T s={13} c={C.text} style={{ lineHeight: 1.8, fontStyle: "italic" }}>"{a.script}"</T>
                 </Card>
               );
-            })
+            }) : (
+              <Card style={{ borderLeft: `3px solid ${C.orange || "#ed8936"}`, textAlign: "center", padding: "32px 24px" }}>
+                <T s={14} w={600} c={C.text} style={{ marginBottom: 8 }}>No audio scripts generated</T>
+                <T s={13} c={C.muted} style={{ lineHeight: 1.6 }}>
+                  The LLM did not produce audio scripts for this campaign. Try re-running the strategy or check the pipeline logs for errors.
+                </T>
+              </Card>
+            )
           )}
         </Box>
       )}

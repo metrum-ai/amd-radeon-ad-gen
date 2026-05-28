@@ -1,10 +1,12 @@
-// Created by Metrum AI for AMD
+// Copyright Advanced Micro Devices, Inc.
+//
+// SPDX-License-Identifier: MIT
 
 import { C, radius } from "../../tokens";
 import { Box, T, Badge } from "../primitives";
 import "../../css/strategy/StrategyHeader.css";
 
-export default function StrategyHeader({ campaign, isLoading, isFailed, elapsed }) {
+export default function StrategyHeader({ campaign, isLoading, isFailed, elapsed, contentMissing }) {
   const llmModel = campaign?.metrics?.llm?.model || "";
   const isOpenClaw = /openclaw/i.test(llmModel);
   return (
@@ -53,7 +55,8 @@ export default function StrategyHeader({ campaign, isLoading, isFailed, elapsed 
       )}
       <Box className="strategy-header__status">
         {isFailed && <Badge bg={C.red}>Failed</Badge>}
-        {!isLoading && !isFailed && <Badge bg={C.green}>Phase 1 Complete</Badge>}
+        {!isLoading && !isFailed && !contentMissing && <Badge bg={C.green}>Phase 1 Complete</Badge>}
+        {!isLoading && !isFailed && contentMissing && <Badge bg={C.orange || "#ed8936"}>Incomplete -- missing content</Badge>}
         {isLoading && <Badge bg={C.accent}>Running...</Badge>}
         {elapsed && <T s={11} c={C.dim} w={500}>{elapsed}s</T>}
       </Box>

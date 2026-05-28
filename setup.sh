@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 # =============================================================================
 # AI Ad Generator — Setup & Launch
@@ -17,6 +19,16 @@ hr()    { echo -e "${BOLD}──────────────────
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
+
+# Set a key=value in .env: replace if the key exists, append if it doesn't
+set_env() {
+    local key="$1" val="$2"
+    if grep -q "^${key}=" .env 2>/dev/null; then
+        sed -i "s|^${key}=.*|${key}=${val}|" .env
+    else
+        echo "${key}=${val}" >> .env
+    fi
+}
 
 echo ""
 hr
@@ -60,10 +72,10 @@ fi
 # ROCm drivers + AMD GPUs
 GPU_COUNT=0
 if command -v rocm-smi &>/dev/null; then
-    GPU_COUNT=$(rocm-smi --showid 2>/dev/null | grep -o "GPU\[[0-9]*\]" | sort -u | wc -l)
+    GPU_COUNT=$(rocm-smi --showid 2>/dev/null | grep -o "GPU\[[0-9]*\]" | sort -u | wc -l || true)
     GPU_COUNT=${GPU_COUNT:-0}
     if [ "$GPU_COUNT" -eq 0 ]; then
-        GPU_COUNT=$(rocm-smi -i 2>/dev/null | grep -o "GPU\[[0-9]*\]" | sort -u | wc -l)
+        GPU_COUNT=$(rocm-smi -i 2>/dev/null | grep -o "GPU\[[0-9]*\]" | sort -u | wc -l || true)
         GPU_COUNT=${GPU_COUNT:-0}
     fi
     if [ "$GPU_COUNT" -eq 0 ]; then
@@ -96,6 +108,7 @@ else
 fi
 
 # /dev/kfd and /dev/dri (ROCm device nodes)
+RENDER_GID=""
 if [ ! -e /dev/kfd ]; then
     error "/dev/kfd not found — ROCm kernel driver not loaded"
     PREREQ_FAIL=1
@@ -103,7 +116,20 @@ elif [ ! -d /dev/dri ]; then
     error "/dev/dri not found — DRM subsystem not available"
     PREREQ_FAIL=1
 else
-    ok "ROCm device nodes (/dev/kfd, /dev/dri)"
+    # Detect the GID that owns /dev/kfd (the render/video group on this host)
+    RENDER_GID=$(stat -c '%g' /dev/kfd 2>/dev/null)
+    if [ -z "$RENDER_GID" ]; then
+        RENDER_GID=$(getent group render 2>/dev/null | cut -d: -f3)
+    fi
+    if [ -z "$RENDER_GID" ]; then
+        RENDER_GID=$(getent group video 2>/dev/null | cut -d: -f3)
+    fi
+    if [ -z "$RENDER_GID" ]; then
+        error "Could not detect GPU device group GID from /dev/kfd — set RENDER_GID manually in .env"
+        PREREQ_FAIL=1
+    else
+        ok "ROCm device nodes (/dev/kfd, /dev/dri) — GPU group GID=${RENDER_GID}"
+    fi
 fi
 
 # Disk space — scale by GPU count, reduce if models/images are already cached
@@ -184,17 +210,106 @@ fi
 echo -e "${BOLD}[2/4] GPU configuration${NC}"
 echo ""
 
-PROFILE=""
-OLLAMA_GPU=0
-FLUX_GPU=1
-FLUX_GPU_2=-1
-LTX_GPU=3
+# --- Detect which GPUs are free (no active compute processes) ---
+declare -a FREE_GPUS=()
+declare -A _GPU_BUSY=()
 
-if [ "$GPU_COUNT" -eq 2 ]; then
-    info "2 AMD GPUs detected."
-    info "GPU 0 will run Ollama (LLM). GPU 1 can run either image or video generation."
+if command -v rocm-smi &>/dev/null; then
+    # Method 1: rocm-smi --showpidgpus
+    # Output format (per PID):
+    #   PID 12345 is using N DRM device(s):
+    #   0 1
+    # GPU indices appear on the line AFTER the PID header.
+    _pidgpu_out=$(rocm-smi --showpidgpus 2>/dev/null || true)
+    _in_pid_block=0
+    while IFS= read -r _line; do
+        if echo "$_line" | grep -qE "is using .* DRM device"; then
+            _in_pid_block=1
+            continue
+        fi
+        if [ "$_in_pid_block" -eq 1 ]; then
+            for _tok in $_line; do
+                if echo "$_tok" | grep -qE '^[0-9]+$'; then
+                    _GPU_BUSY[$_tok]=1
+                fi
+            done
+            _in_pid_block=0
+        fi
+    done <<< "$_pidgpu_out"
+
+    # Method 2 (cross-check): rocm-smi --showpids GPU(s) column
+    # Output: PID  PROCESS_NAME  GPU(s)  VRAM_USED  ...
+    # GPU(s) column may contain comma-separated IDs.
+    if [ ${#_GPU_BUSY[@]} -eq 0 ]; then
+        _pids_out=$(rocm-smi --showpids 2>/dev/null || true)
+        while IFS= read -r _line; do
+            if echo "$_line" | grep -qE '^[0-9]+\s'; then
+                _gpu_col=$(echo "$_line" | awk '{print $3}')
+                IFS=',' read -ra _gids <<< "$_gpu_col"
+                for _g in "${_gids[@]}"; do
+                    _g=$(echo "$_g" | tr -d ' ')
+                    if echo "$_g" | grep -qE '^[0-9]+$'; then
+                        _GPU_BUSY[$_g]=1
+                    fi
+                done
+            fi
+        done <<< "$_pids_out"
+    fi
+
+    for gpu_id in $(seq 0 $((GPU_COUNT - 1))); do
+        if [ -z "${_GPU_BUSY[$gpu_id]+x}" ]; then
+            FREE_GPUS+=("$gpu_id")
+        fi
+    done
+
+    # Fallback: if PID-based detection found nothing, check GPU utilization
+    if [ ${#FREE_GPUS[@]} -eq 0 ] && [ ${#_GPU_BUSY[@]} -eq 0 ]; then
+        for gpu_id in $(seq 0 $((GPU_COUNT - 1))); do
+            _util=$(rocm-smi -d "$gpu_id" --showuse 2>/dev/null | grep -oP '\d+(?=%)' | head -1 || echo "0")
+            if [ "${_util:-0}" -lt 5 ]; then
+                FREE_GPUS+=("$gpu_id")
+            fi
+        done
+    fi
+
+    # Last resort: if we still can't determine, assume all GPUs are free
+    if [ ${#FREE_GPUS[@]} -eq 0 ] && [ ${#_GPU_BUSY[@]} -eq 0 ] && [ "$GPU_COUNT" -gt 0 ]; then
+        warn "Could not determine GPU utilization — assuming all ${GPU_COUNT} GPUs are free."
+        for gpu_id in $(seq 0 $((GPU_COUNT - 1))); do
+            FREE_GPUS+=("$gpu_id")
+        done
+    fi
+else
+    # No rocm-smi: assume all detected GPUs are free
+    for gpu_id in $(seq 0 $((GPU_COUNT - 1))); do
+        FREE_GPUS+=("$gpu_id")
+    done
+fi
+
+FREE_GPU_COUNT=${#FREE_GPUS[@]}
+
+if [ "$FREE_GPU_COUNT" -eq 0 ]; then
+    die "No free AMD GPUs available — all ${GPU_COUNT} GPU(s) are currently in use. Free up at least 2 GPUs and re-run."
+elif [ "$FREE_GPU_COUNT" -lt 2 ]; then
+    die "Only 1 free GPU (GPU ${FREE_GPUS[0]}) — minimum 2 free GPUs required (Ollama + at least one generation service). Free up more GPUs and re-run."
+else
+    ok "${FREE_GPU_COUNT} free GPU(s) available: ${FREE_GPUS[*]}"
+fi
+
+echo ""
+
+# --- Allocate free GPUs to services ---
+PROFILE=""
+OLLAMA_GPU=${FREE_GPUS[0]}
+FLUX_GPU=${FREE_GPUS[1]}
+FLUX_GPU_2=-1
+LTX_GPU=-1
+
+if [ "$FREE_GPU_COUNT" -eq 2 ]; then
+    info "2 free GPUs detected (GPU ${FREE_GPUS[0]}, GPU ${FREE_GPUS[1]})."
+    info "GPU ${FREE_GPUS[0]} will run Ollama (LLM). GPU ${FREE_GPUS[1]} can run either image or video generation."
     echo ""
-    echo "  Choose generation track for GPU 1:"
+    echo "  Choose generation track for GPU ${FREE_GPUS[1]}:"
     echo "    1) Image generation  (FLUX.1-schnell)"
     echo "    2) Video generation  (AnimateDiff Lightning)"
     echo ""
@@ -203,16 +318,16 @@ if [ "$GPU_COUNT" -eq 2 ]; then
         case "$_choice" in
             1)
                 PROFILE="image"
-                FLUX_GPU=1
-                LTX_GPU=1
-                ok "2-GPU setup: Ollama (GPU 0) + Image generation (GPU 1)"
+                FLUX_GPU=${FREE_GPUS[1]}
+                LTX_GPU=${FREE_GPUS[1]}
+                ok "2-GPU setup: Ollama (GPU ${OLLAMA_GPU}) + Image generation (GPU ${FLUX_GPU})"
                 break
                 ;;
             2)
                 PROFILE="video"
-                FLUX_GPU=1
-                LTX_GPU=1
-                ok "2-GPU setup: Ollama (GPU 0) + Video generation (GPU 1)"
+                FLUX_GPU=${FREE_GPUS[1]}
+                LTX_GPU=${FREE_GPUS[1]}
+                ok "2-GPU setup: Ollama (GPU ${OLLAMA_GPU}) + Video generation (GPU ${LTX_GPU})"
                 break
                 ;;
             *)
@@ -221,37 +336,37 @@ if [ "$GPU_COUNT" -eq 2 ]; then
         esac
     done
 
-elif [ "$GPU_COUNT" -eq 3 ]; then
-    info "3 AMD GPUs detected."
-    info "GPU 0 = Ollama (LLM). GPU 1 and GPU 2 can run image and/or video generation."
+elif [ "$FREE_GPU_COUNT" -eq 3 ]; then
+    info "3 free GPUs detected (GPU ${FREE_GPUS[0]}, GPU ${FREE_GPUS[1]}, GPU ${FREE_GPUS[2]})."
+    info "GPU ${FREE_GPUS[0]} = Ollama (LLM). GPU ${FREE_GPUS[1]} and GPU ${FREE_GPUS[2]} can run image and/or video generation."
     echo ""
     echo "  Choose deployment layout:"
-    echo "    1) Image only         (FLUX on GPU 1, GPU 2 unused)"
-    echo "    2) Video only         (AnimateDiff on GPU 1, GPU 2 unused)"
-    echo "    3) Image + Video      (FLUX on GPU 1, AnimateDiff on GPU 2)"
+    echo "    1) Image only         (FLUX on GPU ${FREE_GPUS[1]}, GPU ${FREE_GPUS[2]} unused)"
+    echo "    2) Video only         (AnimateDiff on GPU ${FREE_GPUS[1]}, GPU ${FREE_GPUS[2]} unused)"
+    echo "    3) Image + Video      (FLUX on GPU ${FREE_GPUS[1]}, AnimateDiff on GPU ${FREE_GPUS[2]})"
     echo ""
     while true; do
         read -rp "  Enter choice [1/2/3]: " _choice || _choice=""
         case "$_choice" in
             1)
                 PROFILE="image"
-                FLUX_GPU=1
-                LTX_GPU=1
-                ok "3-GPU setup: Ollama (GPU 0) + Image generation (GPU 1) — GPU 2 unused"
+                FLUX_GPU=${FREE_GPUS[1]}
+                LTX_GPU=${FREE_GPUS[1]}
+                ok "3-GPU setup: Ollama (GPU ${OLLAMA_GPU}) + Image generation (GPU ${FLUX_GPU}) — GPU ${FREE_GPUS[2]} unused"
                 break
                 ;;
             2)
                 PROFILE="video"
-                FLUX_GPU=1
-                LTX_GPU=1
-                ok "3-GPU setup: Ollama (GPU 0) + Video generation (GPU 1) — GPU 2 unused"
+                FLUX_GPU=${FREE_GPUS[1]}
+                LTX_GPU=${FREE_GPUS[1]}
+                ok "3-GPU setup: Ollama (GPU ${OLLAMA_GPU}) + Video generation (GPU ${LTX_GPU}) — GPU ${FREE_GPUS[2]} unused"
                 break
                 ;;
             3)
                 PROFILE="image,video"
-                FLUX_GPU=1
-                LTX_GPU=2
-                ok "3-GPU setup: Ollama (GPU 0) + Image (GPU 1) + Video (GPU 2)"
+                FLUX_GPU=${FREE_GPUS[1]}
+                LTX_GPU=${FREE_GPUS[2]}
+                ok "3-GPU setup: Ollama (GPU ${OLLAMA_GPU}) + Image (GPU ${FLUX_GPU}) + Video (GPU ${LTX_GPU})"
                 break
                 ;;
             *)
@@ -261,15 +376,15 @@ elif [ "$GPU_COUNT" -eq 3 ]; then
     done
 
 else
-    # 4+ GPUs — parallel image generation on GPU 1 & 2, video on GPU 3
+    # 4+ free GPUs — parallel image generation on two, video on another
     PROFILE="image,image2,video"
-    FLUX_GPU=1
-    FLUX_GPU_2=2
-    LTX_GPU=3
-    if [ "$GPU_COUNT" -gt 4 ]; then
-        ok "4-GPU setup: Ollama (GPU 0) + FLUX×2 (GPU 1,2) + Video (GPU 3) — GPUs 4-$((GPU_COUNT - 1)) unused"
+    FLUX_GPU=${FREE_GPUS[1]}
+    FLUX_GPU_2=${FREE_GPUS[2]}
+    LTX_GPU=${FREE_GPUS[3]}
+    if [ "$FREE_GPU_COUNT" -gt 4 ]; then
+        ok "4-GPU setup: Ollama (GPU ${OLLAMA_GPU}) + FLUX×2 (GPU ${FLUX_GPU},${FLUX_GPU_2}) + Video (GPU ${LTX_GPU}) — ${FREE_GPUS[*]:4} unused"
     else
-        ok "4-GPU setup: Ollama (GPU 0) + FLUX×2 (GPU 1,2) + Video (GPU 3)"
+        ok "4-GPU setup: Ollama (GPU ${OLLAMA_GPU}) + FLUX×2 (GPU ${FLUX_GPU},${FLUX_GPU_2}) + Video (GPU ${LTX_GPU})"
     fi
 fi
 
@@ -299,11 +414,20 @@ if [ "$SKIP_ENV" -eq 0 ] && [ ! -f .env ]; then
     echo "  Press Enter to accept the default shown in [brackets]."
     echo ""
 
-    # --- Core service credentials/URLs (written by setup) ---
-    # Keep these in .env (not .env.example) so defaults aren't committed as examples.
+    # --- Infrastructure service credentials (written to .env only) ---
+    set_env POSTGRES_PASSWORD "postgres"
     sed -i "s|^APP_DATABASE_URL=.*|APP_DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/adgen|" .env
+
+    set_env RUSTFS_ACCESS_KEY "minioadmin"
+    set_env RUSTFS_SECRET_KEY "minioadmin"
     sed -i "s|^APP_MINIO_ACCESS_KEY=.*|APP_MINIO_ACCESS_KEY=minioadmin|" .env
     sed -i "s|^APP_MINIO_SECRET_KEY=.*|APP_MINIO_SECRET_KEY=minioadmin|" .env
+    sed -i "s|^APP_MINIO_ENDPOINT=.*|APP_MINIO_ENDPOINT=rustfs:9000|" .env
+
+    set_env OPENCLAW_AUTH_TOKEN "adgen-openclaw-internal"
+    sed -i "s|^APP_OPENCLAW_API_KEY=.*|APP_OPENCLAW_API_KEY=adgen-openclaw-internal|" .env
+
+    sed -i "s|^APP_LLM_API_KEY=.*|APP_LLM_API_KEY=ollama-no-auth|" .env
 
     # --- HuggingFace Token (required) ---
     echo -e "  ${BOLD}Secrets${NC}"
@@ -314,19 +438,7 @@ if [ "$SKIP_ENV" -eq 0 ] && [ ! -f .env ]; then
         fi
         error "  HF_TOKEN is required to download gated models (FLUX.1) — cannot be empty."
     done
-    sed -i "s|HF_TOKEN=.*|HF_TOKEN=${_hf}|" .env
-
-    echo ""
-
-    # --- NewsAPI Token (optional) ---
-    echo -e "  ${BOLD}Market Data (optional)${NC}"
-    read -rp "  NewsAPI key for market data enrichment [skip]: " _newsapi || _newsapi=""
-    if [ -n "$_newsapi" ] && [ "$_newsapi" != "skip" ]; then
-        sed -i "s|APP_NEWSAPI_KEY=.*|APP_NEWSAPI_KEY=${_newsapi}|" .env
-        ok "NewsAPI key configured"
-    else
-        info "Skipping NewsAPI — market data enrichment will be unavailable."
-    fi
+    set_env HF_TOKEN "${_hf}"
 
     echo ""
 
@@ -334,7 +446,7 @@ if [ "$SKIP_ENV" -eq 0 ] && [ ! -f .env ]; then
     _default_home="$HOME"
     read -rp "  Host home directory for model cache [${_default_home}]: " _host_home || _host_home=""
     _host_home="${_host_home:-$_default_home}"
-    sed -i "s|HOST_HOME=.*|HOST_HOME=${_host_home}|" .env
+    set_env HOST_HOME "${_host_home}"
 
     echo ""
     ok ".env written"
@@ -344,13 +456,16 @@ fi
 # --- Always apply GPU and profile settings ---
 info "Applying GPU assignment and deployment profile to .env..."
 
-sed -i "s|^OLLAMA_GPU_ID=.*|OLLAMA_GPU_ID=${OLLAMA_GPU}|" .env
-sed -i "s|^FLUX_GPU_ID=.*|FLUX_GPU_ID=${FLUX_GPU}|" .env
+set_env OLLAMA_GPU_ID "${OLLAMA_GPU}"
+set_env FLUX_GPU_ID "${FLUX_GPU}"
 if [ "$FLUX_GPU_2" -ge 0 ]; then
-    sed -i "s|^FLUX_GPU_2_ID=.*|FLUX_GPU_2_ID=${FLUX_GPU_2}|" .env
+    set_env FLUX_GPU_2_ID "${FLUX_GPU_2}"
 fi
-sed -i "s|^LTX_VIDEO_GPU_ID=.*|LTX_VIDEO_GPU_ID=${LTX_GPU}|" .env
-sed -i "s|^COMPOSE_PROFILES=.*|COMPOSE_PROFILES=${PROFILE}|" .env
+set_env LTX_VIDEO_GPU_ID "${LTX_GPU}"
+set_env RENDER_GID "${RENDER_GID}"
+set_env APP_UID "$(id -u)"
+set_env APP_GID "$(id -g)"
+set_env COMPOSE_PROFILES "${PROFILE}"
 
 if [ "$FLUX_GPU_2" -ge 0 ]; then
     ok "OLLAMA=${OLLAMA_GPU}, FLUX-1=${FLUX_GPU}, FLUX-2=${FLUX_GPU_2}, LTX-Video=${LTX_GPU}"

@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 from pydantic_settings import BaseSettings
 
@@ -10,7 +12,7 @@ class Settings(BaseSettings):
 
     database_url: str = ""
     redis_url: str = "redis://valkey:6379/0"
-    minio_endpoint: str = "minio:9000"
+    minio_endpoint: str = "rustfs:9000"
     minio_access_key: str = ""
     minio_secret_key: str = ""
     minio_bucket: str = "campaign-assets"
@@ -18,9 +20,6 @@ class Settings(BaseSettings):
     minio_public_endpoint: str = ""
     minio_public_path_prefix: str = ""
     minio_region: str = "us-east-1"
-    newsapi_key: str = ""
-    market_data_country: str = "us"
-    market_data_trend_timeframe: str = "today 3-m"
 
     provider_mode: str = "local"
 

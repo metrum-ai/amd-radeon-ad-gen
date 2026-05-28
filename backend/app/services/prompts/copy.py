@@ -1,9 +1,9 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 
-def build_copy_prompt(
-    campaign, strategy, market_context: str = ""
-) -> tuple[str, str]:
+def build_copy_prompt(campaign, strategy) -> tuple[str, str]:
     """Build the system and user prompts for copy variant generation."""
     system_prompt = """Elite copywriter. Output valid JSON:
 
@@ -33,12 +33,6 @@ Primary Audience: {segments[0] if segments else 'Not specified'}
 
 Write copy that makes someone who has never heard of this product stop and read.
 Use ONLY product details from the brief above."""
-    if market_context:
-        user_prompt += (
-            "\n\nOptional market context from live signals "
-            "(use only when relevant, do not create unsupported claims):\n"
-            f"{market_context}"
-        )
 
     return system_prompt, user_prompt
 

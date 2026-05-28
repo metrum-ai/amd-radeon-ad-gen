@@ -1,4 +1,6 @@
-// Created by Metrum AI for AMD
+// Copyright Advanced Micro Devices, Inc.
+//
+// SPDX-License-Identifier: MIT
 
 import { useState, useEffect, useRef } from "react";
 import { C, radius } from "../tokens";
@@ -48,6 +50,7 @@ const StrategyScreen = ({ onNext, generateUnlocked }) => {
   const campaignError = requestError || (campaignQueryError ? getRtkErrorMessage(campaignQueryError) : null);
   const isLoading = phase === "strategy_running" || phase === "pending";
   const isFailed = phase === "failed";
+  const isStrategyComplete = phase === "strategy_complete";
 
   const {
     strategy,
@@ -74,14 +77,10 @@ const StrategyScreen = ({ onNext, generateUnlocked }) => {
 
   const capsRef = useRef(null);
 
-  const strategyMarketRecActive =
-    strategy?.market_data_used !== false;
-
   useEffect(() => {
     const t = campaign?.tracks;
     if (!t) return;
     const hasRec =
-      strategyMarketRecActive &&
       strategyReady &&
       strategy?.track_recommendations &&
       Object.keys(strategy.track_recommendations).length > 0;
@@ -92,14 +91,13 @@ const StrategyScreen = ({ onNext, generateUnlocked }) => {
       img: capsRef.current ? capsRef.current.image !== false : t.image_text !== false,
       video: capsRef.current ? capsRef.current.video !== false : t.video !== false,
     }));
-  }, [campaign?.tracks, strategyReady, strategy?.track_recommendations, strategyMarketRecActive]);
+  }, [campaign?.tracks, strategyReady, strategy?.track_recommendations]);
 
   useEffect(() => {
     const a = hwCaps?.allowed_tracks;
     if (!a) return;
     capsRef.current = a;
     const hasRec =
-      strategyMarketRecActive &&
       strategyReady &&
       strategy?.track_recommendations &&
       Object.keys(strategy.track_recommendations).length > 0;
@@ -109,10 +107,9 @@ const StrategyScreen = ({ onNext, generateUnlocked }) => {
       img: a.image !== false,
       video: a.video !== false,
     }));
-  }, [hwCaps, strategyReady, strategy?.track_recommendations, strategyMarketRecActive]);
+  }, [hwCaps, strategyReady, strategy?.track_recommendations]);
 
   useEffect(() => {
-    if (!strategyMarketRecActive) return;
     if (!strategyReady || !strategy?.track_recommendations) return;
     const tr = strategy.track_recommendations;
     if (!tr || typeof tr !== "object" || !Object.keys(tr).length) return;
@@ -122,7 +119,7 @@ const StrategyScreen = ({ onNext, generateUnlocked }) => {
       audio: tr.audio_podcast?.recommended === true,
       video: a.video === false ? false : tr.video?.recommended === true,
     });
-  }, [strategyReady, strategy?.id, strategy?.track_recommendations, hwCaps?.allowed_tracks, strategyMarketRecActive]);
+  }, [strategyReady, strategy?.id, strategy?.track_recommendations, hwCaps?.allowed_tracks]);
 
   const hwAllowed = hwCaps?.allowed_tracks || { llm: true, image: false, video: false };
 
@@ -151,7 +148,7 @@ const StrategyScreen = ({ onNext, generateUnlocked }) => {
 
   return (
     <Box className="strategy-screen">
-      <StrategyHeader campaign={campaign} isLoading={isLoading} isFailed={isFailed} elapsed={elapsed} />
+      <StrategyHeader campaign={campaign} isLoading={isLoading} isFailed={isFailed} elapsed={elapsed} contentMissing={isStrategyComplete && (copyVariants.length === 0 || scenes.length === 0 || audioAds.length === 0)} />
 
       {campaignError && (
         <Box style={{
@@ -213,7 +210,7 @@ const StrategyScreen = ({ onNext, generateUnlocked }) => {
         ) : (
           <>
             <Box />
-            <Btn primary onClick={handleApprove} disabled={isLoading || approving}>
+            <Btn primary onClick={handleApprove} disabled={isLoading || approving || !isStrategyComplete || copyVariants.length === 0 || scenes.length === 0 || audioAds.length === 0}>
               {approving ? "Starting..." : "Approve & Generate"} {"→"}
             </Btn>
           </>

@@ -1,3 +1,15 @@
+# Release v1.2
+
+## Updates
+
+* **Dynamic Free-GPU Allocation**: `setup.sh` now probes each AMD GPU for active compute processes and assigns only free GPUs to services, instead of assuming fixed GPU 0/1/2/3 ordering. Enables deployment on shared servers where some GPUs are already in use.
+
+* **Non-Root Container Security**: Nginx frontend container now runs as the unprivileged `nginx` user with proper cache directory ownership.
+
+* **Compliance and Security Hardening**: Resolved high‑severity vulnerability findings. Added SPDX copyright headers to all source files.
+
+---
+
 # Release v1.1
 
 ## Updates
@@ -17,7 +29,6 @@
 
 * **Multi-Track Asset Generation**: Parallel generation across three tracks — display images via FLUX.1-schnell, voiceover audio via Kokoro TTS, and animated video via AnimateDiff Lightning — each on dedicated GPU or CPU resources.
 
-* **Market Data Enrichment**: Optional live market data injection via NewsAPI for trend-aware strategy generation.
 
 * **Real-Time GPU Monitoring**: Collapsible sidebar with live AMD GPU telemetry (compute utilization, VRAM usage, temperature, power draw) alongside CPU and system memory metrics via Prometheus, AMD Device Metrics Exporter, and Node Exporter.
 
@@ -25,7 +36,7 @@
 
 * **Flexible GPU Deployment**: Built and optimized for AMD Radeon AI PRO R9700S (9700S) GPUs, with support for 4-GPU (parallel image + video), 3-GPU, and 2-GPU (image or video) configurations via Docker Compose profiles (`image`, `image2`, `video`) and environment-driven GPU assignment (`OLLAMA_GPU_ID`, `FLUX_GPU_ID`, `FLUX_GPU_2_ID`, `LTX_VIDEO_GPU_ID`).
 
-* **One-Command Deployment**: Fully containerized microservices architecture with Docker Compose orchestration for all services — FastAPI backend, Celery workers, Ollama, FLUX, LTX-Video, Kokoro TTS, PostgreSQL, Valkey, MinIO, Prometheus, and Nginx reverse proxy.
+* **One-Command Deployment**: Fully containerized microservices architecture with Docker Compose orchestration for all services — FastAPI backend, Celery workers, Ollama, FLUX, LTX-Video, Kokoro TTS, PostgreSQL, Valkey, RustFS, Prometheus, and Nginx reverse proxy.
 
 ---
 
@@ -48,7 +59,7 @@
 | Nginx | 1.27-alpine | [BSD 2-Clause](https://nginx.org/LICENSE) |
 | PostgreSQL | 16-alpine | [PostgreSQL License](https://www.postgresql.org/about/licence/) |
 | Valkey | 8-alpine | [BSD 3-Clause](https://github.com/valkey-io/valkey-container/blob/mainline/LICENSE) |
-| MinIO | RELEASE.2025-04-08T15-41-24Z | [GNU AGPLv3](https://github.com/minio/minio/blob/RELEASE.2025-03-12T18-04-18Z/LICENSE) |
+| RustFS | latest (1.0.0-beta) | [Apache License 2.0](https://github.com/rustfs/rustfs/blob/main/LICENSE) |
 | Ollama (ROCm) | rocm | [MIT License](https://github.com/ollama/ollama/blob/main/LICENSE) |
 | Kokoro FastAPI TTS (CPU) | v0.2.4 | [Apache License 2.0](https://github.com/remsky/Kokoro-FastAPI/blob/master/LICENSE) |
 | ROCm PyTorch (FLUX / LTX-Video base) | rocm7.1.1, PyTorch 2.10.0 | [BSD 3-Clause](https://github.com/pytorch/pytorch/blob/main/LICENSE) |
@@ -65,18 +76,18 @@
 | redis (Python) | 6.4.0 | [MIT License](https://github.com/redis/redis-py/blob/master/LICENSE) |
 | sqlalchemy[asyncio] | 2.0.47 | [MIT License](https://github.com/sqlalchemy/sqlalchemy/blob/main/LICENSE) |
 | asyncpg | 0.31.0 | [Apache License 2.0](https://github.com/MagicStack/asyncpg/blob/master/LICENSE) |
-| pydantic-settings | 2.13.1 | [MIT License](https://pypi.org/project/pydantic-settings/) |
+| pydantic-settings | 2.13.1 | [MIT License](https://github.com/pydantic/pydantic-settings/blob/main/LICENSE) |
 | httpx | 0.28.1 | [BSD 3-Clause](https://github.com/encode/httpx/blob/master/LICENSE.md) |
-| minio (Python) | 7.2.20 | [Apache License 2.0](https://github.com/minio/minio-py/blob/master/LICENSE) |
+| minio (Python SDK) | 7.2.20 | [Apache License 2.0](https://github.com/minio/minio-py/blob/master/LICENSE) |
 | numpy | 2.4.2 | [BSD 3-Clause](https://numpy.org/doc/stable/license.html) |
-| pillow | 12.1.1 | [HPND (MIT-CMU)](https://github.com/python-pillow/Pillow/blob/main/LICENSE) |
-| psycopg2-binary | 2.9.11 | [LGPL v2.1+](https://www.psycopg.org/license/) |
+| pillow | 12.2.0 | [HPND (MIT-CMU)](https://github.com/python-pillow/Pillow/blob/main/LICENSE) |
+| psycopg | 3.2.9 | [LGPL-3.0](https://github.com/psycopg/psycopg/blob/master/LICENSE.txt) |
 | pytesseract | 0.3.13 | [Apache License 2.0](https://github.com/madmaze/pytesseract/blob/master/LICENSE) |
 | defusedxml | 0.7.1 | [PSF License](https://github.com/tiran/defusedxml/blob/main/LICENSE) |
 | diffusers[torch] | >=0.36.0 | [Apache License 2.0](https://github.com/huggingface/diffusers/blob/main/LICENSE) |
 | transformers | latest | [Apache License 2.0](https://github.com/huggingface/transformers/blob/main/LICENSE) |
 | accelerate | latest | [Apache License 2.0](https://github.com/huggingface/accelerate/blob/main/LICENSE) |
-| peft | latest | [Apache License 2.0](https://pypi.org/project/peft/) |
+| peft | latest | [Apache License 2.0](https://github.com/huggingface/peft/blob/main/LICENSE) |
 | sentencepiece | latest | [Apache License 2.0](https://github.com/google/sentencepiece/blob/master/LICENSE) |
 | protobuf | latest | [BSD 3-Clause](https://github.com/protocolbuffers/protobuf/blob/master/LICENSE) |
 | safetensors | latest | [Apache License 2.0](https://github.com/huggingface/safetensors/blob/main/LICENSE) |
@@ -91,3 +102,15 @@
 | @vitejs/plugin-react | ^4.3.0 | [MIT License](https://github.com/vitejs/vite-plugin-react/blob/main/LICENSE) |
 | ffmpeg (system) | — | [LGPL v2.1+](https://ffmpeg.org/legal.html) |
 | tesseract-ocr (system) | — | [Apache License 2.0](https://github.com/tesseract-ocr/tesseract/blob/main/LICENSE) |
+
+### AI/ML Models (Runtime-Fetched)
+
+| Model | Provider | License |
+|-------|----------|---------|
+| FLUX.1-schnell | Black Forest Labs | [Apache License 2.0](https://github.com/black-forest-labs/flux/blob/main/model_licenses/LICENSE-FLUX1-schnell) |
+| AnimateDiff-Lightning | ByteDance | [CreativeML Open RAIL-M](https://huggingface.co/ByteDance/AnimateDiff-Lightning/blob/main/LICENSE.md) |
+| DreamShaper | Lykon | [CreativeML Open RAIL-M](https://huggingface.co/spaces/CompVis/stable-diffusion-license) |
+| AnimateDiff Motion LoRA | guoyww | [Apache License 2.0](https://github.com/guoyww/AnimateDiff/blob/main/LICENSE.txt) |
+| Qwen3 8B | Alibaba Cloud (Qwen) | [Apache License 2.0](https://huggingface.co/Qwen/Qwen3-8B/blob/main/LICENSE) |
+| Kokoro-82M TTS | hexgrad | [Apache License 2.0](https://github.com/hexgrad/kokoro/blob/main/LICENSE) |
+

@@ -1,4 +1,5 @@
-<!-- Created by Metrum AI for AMD -->
+<!-- Copyright Advanced Micro Devices, Inc. -->
+<!-- SPDX-License-Identifier: MIT -->
 
 # AI Ad Generator
 
@@ -12,9 +13,9 @@ The platform automates the full lifecycle of digital ad creation, from initial b
 
 ### **Campaign Pipeline Stages**
 
-1. **Campaign Brief** — Define brand identity (name, logo, colors, fonts), product description, campaign objective, style/tone preferences, and optional reference images. Includes brand presets (AMD, Google, etc.) for quick start.
+1. **Campaign Brief** — Define brand identity (name, logo, colors, fonts), product description, campaign objective, style/tone preferences, and optional reference images. Includes an AMD brand preset for quick start.
 
-2. **AI Strategy Generation (Phase 1)** — An LLM (Qwen3 8B via Ollama) analyzes the brief and generates a full creative strategy: positioning direction, audience segments with demographics, ad copy variants, scene descriptions for visuals, audio scripts, and a soundtrack plan. Optionally enriched with live market data from NewsAPI.
+2. **AI Strategy Generation (Phase 1)** — An LLM (Qwen3 8B via Ollama) analyzes the brief and generates a full creative strategy: positioning direction, audience segments with demographics, ad copy variants, scene descriptions for visuals, audio scripts, and a soundtrack plan.
 
 3. **Multi-Track Asset Generation (Phase 2)** — Based on the approved strategy, the system generates assets across three independent tracks:
    - **Image Track** — Display ad images via FLUX.1-schnell (GPU 1 + GPU 2 in parallel on 4-GPU setups)
@@ -124,7 +125,7 @@ The script will:
    - **2 GPUs** — prompts you to choose image or video generation for GPU 1
    - **3 GPUs** — prompts you to choose image only, video only, or image + video (one GPU each)
    - **4+ GPUs** — full setup with parallel image generation (2 FLUX instances) and video generation
-3. **Configure environment** — prompts for HuggingFace token (required), NewsAPI key (optional), and host home directory
+3. **Configure environment** — prompts for HuggingFace token (required) and host home directory
 4. **Build and start all services**
 
 3. Access the application:
@@ -153,7 +154,6 @@ Required variables:
 | HF_TOKEN | - | HuggingFace token for gated models (FLUX.1) — **required** |
 | HOST_HOME | /home/\<your-username\> | Host home directory for model cache volume mounts |
 | COMPOSE_PROFILES | image,image2,video | Deployment profile (see below) |
-| APP_NEWSAPI_KEY | - | NewsAPI key for market data enrichment (optional) |
 
 2. Choose your deployment profile in `.env`:
 
@@ -201,7 +201,7 @@ docker compose ps
 Core services (always running regardless of profile):
 - `postgres` (PostgreSQL database)
 - `valkey` (Message broker)
-- `minio` (S3-compatible object storage)
+- `rustfs` (S3-compatible object storage)
 - `ollama` (LLM inference)
 - `backend` (FastAPI application server)
 - `celery-worker` (CPU task worker — 4 concurrent)
@@ -245,7 +245,7 @@ Navigate to [localhost:8080](http://localhost:8080) to access the AI Ad Generato
 
 The application provides a three-screen workflow:
 
-1. **Campaign Brief** — Brand identity setup, product details, style/tone selection, market data toggle
+1. **Campaign Brief** — Brand identity setup, product details, style/tone selection
 2. **Strategy Review** — AI-generated creative strategy with tabbed sections (Direction, Audiences, Copy, Scenes, Audio, Tracks), track enable/disable, approval flow
 3. **Generation Output** — Real-time pipeline progress, raw AI outputs, creative directives, campaign preview, and ZIP export
 
@@ -254,7 +254,7 @@ The top navigation bar provides tab switching between Campaign (Brief + Strategy
 ### Running a Campaign: Step by Step
 
 #### **Step 1: Configure Brand**
-1. Select a brand preset (AMD, Google, Apple, Meta, Microsoft) or create a custom brand
+1. Select the AMD brand preset or create a custom brand
 2. For custom brands: enter brand name, upload logo, add brand colors and fonts
 
 ![Brand Selection](./assets/brand_selection.png)
@@ -264,7 +264,7 @@ The top navigation bar provides tab switching between Campaign (Brief + Strategy
 2. Define the campaign objective
 3. Select style and tone chips (Bold, Technical, Cinematic, etc.)
 4. Optionally upload a reference image for visual guidance
-5. Optionally enable "Inject Market Data" for live trend enrichment
+5. Submit to generate strategy
 
 ![Campaign Details](./assets/campaign_details.png)
 
@@ -303,7 +303,7 @@ The solution is a Docker Compose–orchestrated set of services designed to run 
 - **API (`backend`)**: FastAPI orchestrates campaign generation, compositing, and packaging
 - **Workers (`celery-worker`, `celery-worker-gpu`, `celery-worker-gpu-2`)**: background tasks for generation and post-processing (GPU workers run when image/video profiles are enabled)
 - **Model services (`ollama`, `flux-server`, `flux-server-2`, `ltx-video`, `kokoro-tts`)**: LLM, image, video, and TTS endpoints
-- **Data plane (`postgres`, `minio`, `valkey`)**: state, assets, and queue/broker
+- **Data plane (`postgres`, `rustfs`, `valkey`)**: state, assets, and queue/broker
 - **Observability (`prometheus`, `amd-device-metrics-exporter`, `node-exporter`, `metrics-scraper`)**: GPU/system telemetry and UI metrics display
 
 For a full component/version/license list, see `release_notes.md`.
@@ -463,7 +463,7 @@ Strategy generation is integrated with **OpenClaw** as an OpenAI-compatible gate
 |----------|---------|-------------|
 | APP_DATABASE_URL | (set by setup) | PostgreSQL connection string |
 | APP_REDIS_URL | redis://valkey:6379/0 | Valkey connection string (redis:// protocol) |
-| APP_MINIO_ENDPOINT | minio:9000 | MinIO S3 endpoint |
+| APP_MINIO_ENDPOINT | rustfs:9000 | RustFS S3 endpoint |
 | APP_MINIO_BUCKET | campaign-assets | Asset storage bucket name |
 
 ### AI Models
@@ -494,13 +494,6 @@ Strategy generation is integrated with **OpenClaw** as an OpenAI-compatible gate
 | FLUX_GPU_2_ID | 2 | HIP_VISIBLE_DEVICES for FLUX instance 2 (4-GPU parallel) |
 | LTX_VIDEO_GPU_ID | 3 | HIP_VISIBLE_DEVICES for LTX-Video generation container |
 
-### Market Data (Optional)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| APP_NEWSAPI_KEY | - | NewsAPI key for market trend enrichment |
-| APP_MARKET_DATA_COUNTRY | us | Target country for news/trend data |
-
 > [!IMPORTANT]
 > **Frontend variables are build-time variables:**
 > The `VITE_*` variables are embedded during the Docker build. If you change them, rebuild the frontend:
@@ -508,3 +501,10 @@ Strategy generation is integrated with **OpenClaw** as an OpenAI-compatible gate
 > docker compose build frontend
 > docker compose up -d frontend --force-recreate
 > ```
+
+---
+
+## Disclaimer
+
+> [!NOTE]
+> Performance varies by hardware and software configurations, including testing conditions, system settings, application complexity, the quantity of data, batch sizes, software versions, libraries used, and other factors. Any performance or benchmarking results referenced in this repository are provided for informational purposes only and should not be interpreted as a guarantee of actual performance.

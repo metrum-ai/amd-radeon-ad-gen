@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 """Prometheus -> PostgreSQL metrics bridge. Polls Prometheus HTTP API
 and writes GPU metrics to the gpu_metrics table for frontend consumption.
@@ -22,7 +24,9 @@ from sqlalchemy.orm import sessionmaker
 
 log = logging.getLogger("metrics_scraper")
 
-sync_engine = create_engine(settings.database_url.replace("+asyncpg", ""))
+sync_engine = create_engine(
+    settings.database_url.replace("+asyncpg", "+psycopg")
+)
 SyncSession = sessionmaker(sync_engine)
 
 PROMETHEUS_URL = "http://prometheus:9090"

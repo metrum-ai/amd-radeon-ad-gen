@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 """Pillow-based ad compositor. Overlays headline, body, CTA, and logo
 onto a generated image. Text is always rendered programmatically --

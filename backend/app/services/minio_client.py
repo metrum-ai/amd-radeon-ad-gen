@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 import io
 import uuid
@@ -9,6 +11,7 @@ from minio import Minio
 
 
 def _get_client() -> Minio:
+    """Return an S3 client configured for the RustFS storage backend."""
     return Minio(
         settings.minio_endpoint,
         access_key=settings.minio_access_key,
@@ -19,7 +22,7 @@ def _get_client() -> Minio:
 
 
 def ensure_bucket() -> None:
-    """Create the configured MinIO bucket if it does not exist."""
+    """Create the configured storage bucket if it does not exist."""
     client = _get_client()
     if not client.bucket_exists(settings.minio_bucket):
         client.make_bucket(settings.minio_bucket)
@@ -31,7 +34,7 @@ def upload_bytes(
     category: str,
     extension: str = "png",
 ) -> str:
-    """Upload binary data to MinIO under
+    """Upload binary data to object storage under
     {campaign_id}/{category}/{uuid}.{ext}. Returns the object key."""
     client = _get_client()
     object_name = f"{campaign_id}/{category}/{uuid.uuid4()}.{extension}"
@@ -52,7 +55,7 @@ def upload_file(
     category: str,
     extension: str = "png",
 ) -> str:
-    """Upload a seekable file object to MinIO. Avoids loading the full
+    """Upload a seekable file object to object storage. Avoids loading the full
     payload into a ``bytes`` object, keeping memory usage flat for
     large files like ZIP exports."""
     client = _get_client()
@@ -68,7 +71,7 @@ def upload_file(
 
 
 def download_bytes(asset_url: str) -> bytes:
-    """Download an object from MinIO given an s3:// URL."""
+    """Download an object from storage given an s3:// URL."""
     client = _get_client()
     _, _, bucket_and_key = asset_url.partition("s3://")
     bucket, _, key = bucket_and_key.partition("/")

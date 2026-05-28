@@ -1,4 +1,6 @@
-/* Created by Metrum AI for AMD */
+/* Copyright Advanced Micro Devices, Inc. */
+/*                                        */
+/* SPDX-License-Identifier: MIT */
 
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;}
 .section-header__left{display:flex;align-items:center;gap:12px;}

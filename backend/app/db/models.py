@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 import uuid
 from datetime import datetime, timezone
@@ -167,23 +169,6 @@ class PromptConfig(Base):
     )
 
 
-class CircanaData(Base):
-    """Cached market/industry data fetched for a campaign."""
-
-    __tablename__ = "circana_data"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    campaign_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE")
-    )
-    product_category: Mapped[str] = mapped_column(Text, nullable=False)
-    market_data: Mapped[dict] = mapped_column(JSONB, default=dict)
-    fetched_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-
 
 class LLMResponse(Base):
     """Audit log entry for a single LLM API call."""
@@ -233,9 +218,6 @@ class CampaignStrategy(Base):
     platform_strategy: Mapped[dict] = mapped_column(JSONB, default=dict)
     track_recommendations: Mapped[dict] = mapped_column(JSONB, default=dict)
     messaging_angles: Mapped[list] = mapped_column(JSONB, default=list)
-    market_data_used: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

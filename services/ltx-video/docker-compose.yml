@@ -1,13 +1,21 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 services:
   ltx-video:
     profiles: ["video"]
     build:
       context: .
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
+    group_add:
+      - "${RENDER_GID}"
     environment:
       - HSA_OVERRIDE_GFX_VERSION=12.0.1
       - HIP_VISIBLE_DEVICES=${LTX_VIDEO_GPU_ID:-3}
@@ -20,8 +28,10 @@ services:
       - PYTORCH_HIP_ALLOC_CONF=expandable_segments:True
       - HF_HUB_ENABLE_HF_TRANSFER=0
       - HF_HUB_DISABLE_XET=1
+      - MIOPEN_FIND_MODE=FAST
     volumes:
-      - ${HOST_HOME:-.}/.cache/huggingface:/root/.cache/huggingface
+      - ${HOST_HOME:-.}/.cache/huggingface:/home/appuser/.cache/huggingface
+      - ${HOST_HOME:-.}/.cache/miopen:/home/appuser/.cache/miopen
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; r=urllib.request.urlopen('http://localhost:8004/health'); import json; d=json.loads(r.read()); exit(0 if d.get('loaded') else 1)"]
       interval: 30s

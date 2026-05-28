@@ -143,3 +143,11 @@ test_output/
 
 # UI/node_modules
 UI/node_modules/
+
+# Compliance scan outputs (generated, not committed)
+compliance-reports/
+.venv-compliance/
+.compliance/
+bin/
+
+.ollama/

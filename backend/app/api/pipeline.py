@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 import uuid
 
@@ -26,16 +28,9 @@ class PipelineStatus(BaseModel):
     celery_task_id: str
 
 
-class StrategizeOptions(BaseModel):
-    """Options for the phase-1 strategy pipeline."""
-
-    market_data_enabled: bool = False
-
-
 @router.post("/{campaign_id}/strategize", response_model=PipelineStatus)
 async def trigger_phase1(
     campaign_id: uuid.UUID,
-    options: StrategizeOptions,
     db: AsyncSession = Depends(get_db),
 ):
     """Enqueue the strategy pipeline (strategy -> copy + scenes -> audio scripts)."""
@@ -49,7 +44,7 @@ async def trigger_phase1(
 
     cid = str(campaign_id)
     task = chain(
-        generate_strategy.si(cid, options.market_data_enabled),
+        generate_strategy.si(cid),
         chord(
             [generate_copy.si(cid), generate_scene_prompts.si(cid)],
             generate_audio_scripts.si(cid),
@@ -169,12 +164,12 @@ async def get_pipeline_status(
             {
                 "stage": r.stage,
                 "status": r.status,
-                "started_at": r.started_at.isoformat()
-                if r.started_at
-                else None,
-                "completed_at": r.completed_at.isoformat()
-                if r.completed_at
-                else None,
+                "started_at": (
+                    r.started_at.isoformat() if r.started_at else None
+                ),
+                "completed_at": (
+                    r.completed_at.isoformat() if r.completed_at else None
+                ),
                 "duration_ms": r.duration_ms,
                 "error": r.error,
                 "retry_count": r.retry_count,

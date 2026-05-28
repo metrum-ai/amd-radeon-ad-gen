@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 """Local LLM provider -- uses Ollama (local /v1/chat/completions endpoint)."""
 
@@ -17,7 +19,7 @@ class LocalLLMProvider(APILLMProvider):
     def __init__(self) -> None:
         super().__init__()
         self._base_url = settings.local_llm_url
-        self._api_key = "not-needed"  # pragma: allowlist secret
+        self._api_key = settings.llm_api_key
         self._model = settings.llm_model or "qwen3:8b"
         self._resolved_model_name: str | None = None
 

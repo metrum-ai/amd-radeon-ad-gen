@@ -1,4 +1,6 @@
-// Created by Metrum AI for AMD
+// Copyright Advanced Micro Devices, Inc.
+//
+// SPDX-License-Identifier: MIT
 
 import { useMemo } from "react";
 
@@ -40,7 +42,7 @@ export default function useStrategyDerivedState({ campaign, pipelineStatus }) {
   const strategyReady = stageStatus.strategy === "completed";
   const copyReady = stageStatus.copy_gen === "completed";
   const scenesReady = stageStatus.scene_gen === "completed";
-  const audioReady = stageStatus.audio_gen === "completed";
+  const audioReady = stageStatus.audio_script_gen === "completed";
 
   const runningTab = useMemo(() => {
     const runningStage = pipelineStatus.find((r) => r.status === "running")?.stage;
@@ -48,7 +50,7 @@ export default function useStrategyDerivedState({ campaign, pipelineStatus }) {
     if (runningStage === "strategy") return "direction";
     if (runningStage === "copy_gen") return "copy";
     if (runningStage === "scene_gen") return "scenes";
-    if (runningStage === "audio_gen") return "audio";
+    if (runningStage === "audio_script_gen") return "audio";
     return null;
   }, [pipelineStatus]);
 

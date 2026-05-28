@@ -1,4 +1,6 @@
-// Created by Metrum AI for AMD
+// Copyright Advanced Micro Devices, Inc.
+//
+// SPDX-License-Identifier: MIT
 
 import { useMemo, useState } from "react";
 import { brandPresets, colorLabels, defaultTones } from "../lib/brief";
@@ -19,7 +21,6 @@ export default function useBriefFormState() {
   const [customToneInput, setCustomToneInput] = useState("");
   const [brandOpen, setBrandOpen] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(0);
-  const [marketDataEnabled, setMarketDataEnabled] = useState(true);
   const [refImage, setRefImage] = useState(null);
   const [brand, setBrand] = useState({
     name: brandPresets[0].name,
@@ -108,7 +109,7 @@ export default function useBriefFormState() {
     campaignObjective, setCampaignObjective,
     validationError, setValidationError,
     tones, setTones, customToneInput, setCustomToneInput, customTones,
-    brandOpen, setBrandOpen, selectedPreset, setSelectedPreset, marketDataEnabled, setMarketDataEnabled,
+    brandOpen, setBrandOpen, selectedPreset, setSelectedPreset,
     refImage, setRefImage, brand, setBrand,
     toggleTone, addCustomTone, applyPreset, startCustom, updateBrand,
     updateColorHex, updateColorLabel, addColor, removeColor, updateFont, addFont, removeFont,

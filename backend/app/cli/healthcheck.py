@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 """CLI health check script for all services.
 
@@ -75,11 +77,11 @@ async def check_valkey() -> bool:
         return False
 
 
-async def check_minio() -> bool:
-    """Verify MinIO liveness."""
+async def check_storage() -> bool:
+    """Verify RustFS object storage liveness."""
     proto = "https" if settings.minio_use_ssl else "http"
-    url = f"{proto}://{settings.minio_endpoint}/minio/health/live"
-    return await check_http("MinIO", url)
+    url = f"{proto}://{settings.minio_endpoint}/health"
+    return await check_http("Storage", url)
 
 
 async def main():
@@ -104,7 +106,7 @@ async def main():
     results = []
     results.append(await check_postgres())
     results.append(await check_valkey())
-    results.append(await check_minio())
+    results.append(await check_storage())
 
     print("\nServices:")
     results.append(

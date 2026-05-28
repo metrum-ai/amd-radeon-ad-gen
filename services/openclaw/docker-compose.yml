@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 services:
   openclaw:
@@ -7,19 +9,21 @@ services:
     volumes:
       - ./config/openclaw.json:/tmp/openclaw-seed.json:ro
       - openclaw-home:/home/node/.openclaw
+    environment:
+      OPENCLAW_AUTH_TOKEN: ${OPENCLAW_AUTH_TOKEN}
     entrypoint:
       - /bin/sh
       - -c
       - |
         chown node:node /home/node/.openclaw
-        cp /tmp/openclaw-seed.json /home/node/.openclaw/openclaw.json
+        sed 's|\${OPENCLAW_AUTH_TOKEN}|'"$${OPENCLAW_AUTH_TOKEN}"'|' /tmp/openclaw-seed.json > /home/node/.openclaw/openclaw.json
         chown node:node /home/node/.openclaw/openclaw.json
         exec su -s /bin/sh node -c "node openclaw.mjs gateway --allow-unconfigured"
     depends_on:
       ollama:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:18789/v1/models -H 'Authorization: Bearer adgen-openclaw-internal' || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:18789/v1/models -H \"Authorization: Bearer $${OPENCLAW_AUTH_TOKEN}\" || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10

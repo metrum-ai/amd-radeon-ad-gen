@@ -1,8 +1,11 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 services:
   kokoro-tts:
     image: ghcr.io/remsky/kokoro-fastapi-cpu:v0.2.4
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8880/health"]
       interval: 10s

@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 import json
 import re
@@ -19,9 +21,11 @@ def _repair_json(text: str) -> str:
     # becomes ..."value"}\n  ]
     text = re.sub(
         r'("[^"]*")\s*\n(\s*\])',
-        lambda m: m.group(1) + "}\n" + m.group(2)
-        if _needs_object_close(text, m.start())
-        else m.group(0),
+        lambda m: (
+            m.group(1) + "}\n" + m.group(2)
+            if _needs_object_close(text, m.start())
+            else m.group(0)
+        ),
         text,
     )
 

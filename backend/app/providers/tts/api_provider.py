@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 import httpx
 from app.config import settings
@@ -21,7 +23,7 @@ class APITTSProvider(TTSProvider):
             "response_format": "wav",
         }
 
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=600) as client:
             resp = await client.post(
                 f"{self._base_url}/v1/audio/speech",
                 json=payload,

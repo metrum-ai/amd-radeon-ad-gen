@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 from app.providers.base import (
     build_image_prompt_guidance,
@@ -6,9 +8,7 @@ from app.providers.base import (
 )
 
 
-def build_scene_prompt(
-    campaign, strategy, market_context: str = ""
-) -> tuple[str, str]:
+def build_scene_prompt(campaign, strategy) -> tuple[str, str]:
     """Build the system and user prompts for scene prompt generation."""
     system_prompt = """Visual creative director writing prompts for FLUX.1-schnell (text-to-image diffusion model). Output valid JSON:
 
@@ -39,7 +39,7 @@ To keep the bottom clear, use LOW CAMERA ANGLES that naturally push subjects to 
 
 PRODUCT ACCURACY POLICY (CRITICAL):
 The image model cannot generate specific product SKUs, model numbers, or niche hardware accurately. A wrong or generic product image is WORSE than no product image at all.
-- If the product is a specific SKU (e.g. "AMD RX 7900 XTX", "iPhone 16 Pro", "Nike Air Max 97") do NOT attempt to depict the product itself. The model will generate a wrong-looking version.
+- If the product is a specific SKU (e.g. "AMD RX 7900 XTX", "a specific GPU model", "a specific running shoe") do NOT attempt to depict the product itself. The model will generate a wrong-looking version.
 - Instead for the PRIMARY scene: create a dramatic, premium environment shot that captures the FEELING of the product category. Use brand colors, dramatic lighting, abstract geometric forms, and material textures that evoke the product's qualities (power, speed, elegance, etc.) WITHOUT showing the product.
 - Do NOT depict the product even when it is a simple shape. Keep the image abstract or environmental.
 - For LIFESTYLE scenes: express the energy or atmosphere of usage through environment, lighting, motion, and composition only. No humans and no products.
@@ -98,12 +98,6 @@ Visual Vocabulary Anchor: {visual_guidance or 'Use category-appropriate environm
 Describe what the camera sees. Keep every image abstract or environmental only.
 Do not show any people, body parts, or product objects.
 Make the brand palette visually dominant in the final image."""
-    if market_context:
-        user_prompt += (
-            "\n\nOptional market context from live signals "
-            "(use only when relevant, do not force weak trends into the creative):\n"
-            f"{market_context}"
-        )
 
     return system_prompt, user_prompt
 
@@ -153,7 +147,7 @@ def scene_response_format() -> dict:
 
 
 def build_audio_script_prompt(
-    campaign, strategy, copy_variants, market_context: str = ""
+    campaign, strategy, copy_variants
 ) -> tuple[str, str]:
     """Build the system and user prompts for audio script generation."""
     system_prompt = """Audio creative director writing 15-second TTS ad scripts. Output valid JSON:
@@ -182,12 +176,6 @@ Creative Direction: {direction}
 Campaign Headlines (for tone reference only, do not repeat them): {headlines}
 
 Write scripts that sound like a real person talking about something they genuinely care about."""
-    if market_context:
-        user_prompt += (
-            "\n\nOptional market context from live signals "
-            "(use only when relevant, do not invent claims from it):\n"
-            f"{market_context}"
-        )
 
     return system_prompt, user_prompt
 

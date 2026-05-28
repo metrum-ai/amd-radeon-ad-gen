@@ -1,14 +1,15 @@
-// Created by Metrum AI for AMD
+// Copyright Advanced Micro Devices, Inc.
+//
+// SPDX-License-Identifier: MIT
 
 import { baseApi } from "./baseApi";
 
 export const pipelineApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     triggerPhase1: builder.mutation({
-      query: ({ id, marketDataEnabled = false }) => ({
+      query: ({ id }) => ({
         url: `/api/campaigns/${id}/strategize`,
         method: "POST",
-        body: { market_data_enabled: marketDataEnabled },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: "Campaign", id },

@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 include:
   - ./backend/docker-compose.yml
@@ -21,7 +23,7 @@ services:
       - frontend
       - backend
       - prometheus
-      - minio
+      - rustfs
       - ollama
       - openclaw
       - kokoro-tts

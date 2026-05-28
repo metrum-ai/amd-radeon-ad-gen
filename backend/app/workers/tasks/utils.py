@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 """Shared utilities for Celery task files.
 
@@ -20,7 +22,9 @@ from app.db.models import Campaign, LLMResponse, PipelineRun, PromptConfig
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-sync_engine = create_engine(settings.database_url.replace("+asyncpg", ""))
+sync_engine = create_engine(
+    settings.database_url.replace("+asyncpg", "+psycopg")
+)
 SyncSession = sessionmaker(sync_engine)
 
 

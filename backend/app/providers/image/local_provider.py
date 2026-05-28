@@ -1,4 +1,6 @@
-# Created by Metrum AI for AMD
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
 
 """Local FLUX.1-Dev provider -- calls a locally-served FLUX FastAPI
 server running on GPU 1.

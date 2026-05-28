@@ -1,4 +1,6 @@
-// Created by Metrum AI for AMD
+// Copyright Advanced Micro Devices, Inc.
+//
+// SPDX-License-Identifier: MIT
 
 import { useState } from "react";
 import { C, gradient, shadow, radius } from "../tokens";
@@ -37,8 +39,6 @@ const BriefScreen = ({ onNext }) => {
     brandOpen,
     setBrandOpen,
     selectedPreset,
-    marketDataEnabled,
-    setMarketDataEnabled,
     refImage,
     setRefImage,
     brand,
@@ -110,7 +110,6 @@ const BriefScreen = ({ onNext }) => {
 
       await triggerPhase1({
         id: campaignResult.id,
-        marketDataEnabled,
       }).unwrap();
       onNext();
     } catch (error) {
@@ -163,43 +162,6 @@ const BriefScreen = ({ onNext }) => {
         setValidationError={setValidationError}
       />
 
-      <Box className="brief-screen__market-data" style={{ display: "block" }}>
-        <Box className="brief-screen__market-card" style={{ borderRadius: radius.md, background: C.elevated }}>
-          <Box className="brief-screen__market-row">
-            <Box className="brief-screen__market-left">
-              <Box
-                onClick={() => setMarketDataEnabled(!marketDataEnabled)}
-                style={{
-                  width: 44,
-                  height: 24,
-                  borderRadius: 12,
-                  background: marketDataEnabled ? gradient.amdH : C.hover,
-                  position: "relative",
-                  cursor: "pointer",
-                  border: `1px solid ${marketDataEnabled ? "transparent" : C.border}`,
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <Box style={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: 9,
-                  background: "#fff",
-                  position: "absolute",
-                  top: 3,
-                  left: marketDataEnabled ? 23 : 3,
-                  boxShadow: shadow.sm,
-                  transition: "left 0.2s ease",
-                }} />
-              </Box>
-              <Box>
-                <T s={13} w={600} c={marketDataEnabled ? C.white : C.muted}>Inject Market Data</T>
-                <T s={11} c={C.dim}>Use Reddit Trends to enrich Strategy Generation</T>
-              </Box>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
 
       <BriefErrorBanner message={validationError || requestError} />
 
