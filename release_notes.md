@@ -1,34 +1,12 @@
-# Release v1.2
-
-## Updates
-
-* **Dynamic Free-GPU Allocation**: `setup.sh` now probes each AMD GPU for active compute processes and assigns only free GPUs to services, instead of assuming fixed GPU 0/1/2/3 ordering. Enables deployment on shared servers where some GPUs are already in use.
-
-* **Non-Root Container Security**: Nginx frontend container now runs as the unprivileged `nginx` user with proper cache directory ownership.
-
-* **Compliance and Security Hardening**: Resolved high‑severity vulnerability findings. Added SPDX copyright headers to all source files.
-
----
-
-# Release v1.1
-
-## Updates
-
-* **OpenClaw Integration**: Strategy generation is routed through OpenClaw (OpenAI-compatible gateway) in front of the local Ollama model.
-* **Structured JSON Reliability**: Added per-module handling for structured outputs.
-
----
-
-# Release v1.0
+# Release v1.3
 
 ## Features
 
 * **End-to-End Campaign Pipeline**: Automated workflow from brand brief to downloadable campaign package — LLM-driven creative strategy, multi-track asset generation (image, audio, video), brand compositing, and ZIP export, all running locally on AMD Radeon AI PRO R9700S (9700S) GPUs.
 
-* **AI Strategy Generation**: Qwen3 8B LLM via Ollama analyzes brand briefs and produces full creative strategies including positioning direction, audience segmentation with demographics, ad copy variants, scene descriptions, audio scripts, and soundtrack planning.
+* **AI Strategy Generation**: Qwen3 8B LLM (via OpenClaw gateway and Ollama) analyzes brand briefs and produces full creative strategies — positioning, audience segmentation, ad copy, scene descriptions, and audio scripts — with structured JSON output handling per module.
 
 * **Multi-Track Asset Generation**: Parallel generation across three tracks — display images via FLUX.1-schnell, voiceover audio via Kokoro TTS, and animated video via AnimateDiff Lightning — each on dedicated GPU or CPU resources.
-
 
 * **Real-Time GPU Monitoring**: Collapsible sidebar with live AMD GPU telemetry (compute utilization, VRAM usage, temperature, power draw) alongside CPU and system memory metrics via Prometheus, AMD Device Metrics Exporter, and Node Exporter.
 
@@ -38,11 +16,15 @@
 
 * **One-Command Deployment**: Fully containerized microservices architecture with Docker Compose orchestration for all services — FastAPI backend, Celery workers, Ollama, FLUX, LTX-Video, Kokoro TTS, PostgreSQL, Valkey, RustFS, Prometheus, and Nginx reverse proxy.
 
+* **Dynamic Free-GPU Allocation**: `setup.sh` probes each AMD GPU for active compute processes and assigns only free GPUs to services. Enables deployment on shared servers where some GPUs are already in use.
+
+* **Compliance and Security Hardening**: Resolved high-severity vulnerability findings. Added SPDX copyright headers to all source files.
+
 ---
 
 ## Main User Flow
 
-1. **Create a campaign brief** (brand identity + product + objective + style/tone, optional market data)
+1. **Create a campaign brief** (brand identity + product + objective + style/tone)
 2. **Generate strategy** (LLM produces direction, audiences, copy, scenes, and audio plan)
 3. **Approve tracks** (image/audio/video based on available hardware)
 4. **Run generation** (parallel image/audio/video pipelines)
@@ -56,61 +38,63 @@
 
 | Component | Version | License |
 |-----------|---------|---------|
-| Nginx | 1.27-alpine | [BSD 2-Clause](https://nginx.org/LICENSE) |
-| PostgreSQL | 16-alpine | [PostgreSQL License](https://www.postgresql.org/about/licence/) |
-| Valkey | 8-alpine | [BSD 3-Clause](https://github.com/valkey-io/valkey-container/blob/mainline/LICENSE) |
-| RustFS | latest (1.0.0-beta) | [Apache License 2.0](https://github.com/rustfs/rustfs/blob/main/LICENSE) |
-| Ollama (ROCm) | rocm | [MIT License](https://github.com/ollama/ollama/blob/main/LICENSE) |
-| Kokoro FastAPI TTS (CPU) | v0.2.4 | [Apache License 2.0](https://github.com/remsky/Kokoro-FastAPI/blob/master/LICENSE) |
-| ROCm PyTorch (FLUX / LTX-Video base) | rocm7.1.1, PyTorch 2.10.0 | [BSD 3-Clause](https://github.com/pytorch/pytorch/blob/main/LICENSE) |
-| AMD Device Metrics Exporter | v1.4.2 | [Apache License 2.0](https://github.com/ROCm/device-metrics-exporter/blob/main/LICENSE) |
-| Prometheus | v3.3.1 | [Apache License 2.0](https://github.com/prometheus/prometheus/blob/main/LICENSE) |
-| Node Exporter | v1.9.1 | [Apache License 2.0](https://github.com/prometheus/node_exporter/blob/master/LICENSE) |
-| Python | 3.11-slim | [PSF License](https://docs.python.org/3/license.html) |
-| Node.js | 20-alpine | [MIT License](https://github.com/nodejs/node/blob/main/LICENSE) |
-| Docker | >=25.0 | [Apache License 2.0](https://github.com/moby/moby/blob/master/LICENSE) |
-| Docker Compose | >=v2.0 | [Apache License 2.0](https://github.com/docker/compose/blob/main/LICENSE) |
-| fastapi | 0.133.0 | [MIT License](https://github.com/fastapi/fastapi/blob/master/LICENSE) |
-| uvicorn[standard] | 0.41.0 | [BSD 3-Clause](https://github.com/encode/uvicorn/blob/master/LICENSE.md) |
-| celery[redis] | 5.6.2 | [BSD 3-Clause](https://github.com/celery/celery/blob/main/LICENSE) |
-| redis (Python) | 6.4.0 | [MIT License](https://github.com/redis/redis-py/blob/master/LICENSE) |
-| sqlalchemy[asyncio] | 2.0.47 | [MIT License](https://github.com/sqlalchemy/sqlalchemy/blob/main/LICENSE) |
-| asyncpg | 0.31.0 | [Apache License 2.0](https://github.com/MagicStack/asyncpg/blob/master/LICENSE) |
-| pydantic-settings | 2.13.1 | [MIT License](https://github.com/pydantic/pydantic-settings/blob/main/LICENSE) |
-| httpx | 0.28.1 | [BSD 3-Clause](https://github.com/encode/httpx/blob/master/LICENSE.md) |
-| minio (Python SDK) | 7.2.20 | [Apache License 2.0](https://github.com/minio/minio-py/blob/master/LICENSE) |
-| numpy | 2.4.2 | [BSD 3-Clause](https://numpy.org/doc/stable/license.html) |
-| pillow | 12.2.0 | [HPND (MIT-CMU)](https://github.com/python-pillow/Pillow/blob/main/LICENSE) |
-| psycopg | 3.2.9 | [LGPL-3.0](https://github.com/psycopg/psycopg/blob/master/LICENSE.txt) |
-| pytesseract | 0.3.13 | [Apache License 2.0](https://github.com/madmaze/pytesseract/blob/master/LICENSE) |
-| defusedxml | 0.7.1 | [PSF License](https://github.com/tiran/defusedxml/blob/main/LICENSE) |
-| diffusers[torch] | >=0.36.0 | [Apache License 2.0](https://github.com/huggingface/diffusers/blob/main/LICENSE) |
-| transformers | latest | [Apache License 2.0](https://github.com/huggingface/transformers/blob/main/LICENSE) |
-| accelerate | latest | [Apache License 2.0](https://github.com/huggingface/accelerate/blob/main/LICENSE) |
-| peft | latest | [Apache License 2.0](https://github.com/huggingface/peft/blob/main/LICENSE) |
-| sentencepiece | latest | [Apache License 2.0](https://github.com/google/sentencepiece/blob/master/LICENSE) |
-| protobuf | latest | [BSD 3-Clause](https://github.com/protocolbuffers/protobuf/blob/master/LICENSE) |
-| safetensors | latest | [Apache License 2.0](https://github.com/huggingface/safetensors/blob/main/LICENSE) |
-| huggingface_hub | latest | [Apache License 2.0](https://github.com/huggingface/huggingface_hub/blob/main/LICENSE) |
-| imageio | latest | [BSD 2-Clause](https://github.com/imageio/imageio/blob/master/LICENSE) |
-| imageio-ffmpeg | latest | [BSD 2-Clause](https://github.com/imageio/imageio-ffmpeg/blob/master/LICENSE) |
-| react | ^19.0.0 | [MIT License](https://github.com/facebook/react/blob/main/LICENSE) |
-| react-dom | ^19.0.0 | [MIT License](https://github.com/facebook/react/blob/main/LICENSE) |
-| react-redux | ^9.2.0 | [MIT License](https://github.com/reduxjs/react-redux/blob/master/LICENSE.md) |
-| @reduxjs/toolkit | ^2.11.2 | [MIT License](https://github.com/reduxjs/redux-toolkit/blob/master/LICENSE) |
-| vite | ^6.0.0 | [MIT License](https://github.com/vitejs/vite/blob/main/LICENSE) |
-| @vitejs/plugin-react | ^4.3.0 | [MIT License](https://github.com/vitejs/vite-plugin-react/blob/main/LICENSE) |
-| ffmpeg (system) | — | [LGPL v2.1+](https://ffmpeg.org/legal.html) |
-| tesseract-ocr (system) | — | [Apache License 2.0](https://github.com/tesseract-ocr/tesseract/blob/main/LICENSE) |
+| Nginx (reverse proxy) | 1.27-alpine | [BSD-2-Clause](https://nginx.org/LICENSE) |
+| Nginx (frontend container) | stable-alpine | [BSD-2-Clause](https://nginx.org/LICENSE) |
+| PostgreSQL | 16-alpine | [PostgreSQL](https://www.postgresql.org/about/licence/) |
+| Valkey | 8-alpine | [BSD-3-Clause](https://github.com/valkey-io/valkey-container/blob/mainline/LICENSE) |
+| RustFS | latest (1.0.0-beta) | [Apache-2.0](https://github.com/rustfs/rustfs/blob/main/LICENSE) |
+| Ollama (ROCm) | rocm | [MIT](https://github.com/ollama/ollama/blob/main/LICENSE) |
+| OpenClaw | latest | [MIT](https://github.com/openclaw/openclaw/blob/main/LICENSE) |
+| Kokoro FastAPI TTS (CPU) | v0.2.4 | [Apache-2.0](https://github.com/remsky/Kokoro-FastAPI/blob/master/LICENSE) |
+| ROCm PyTorch (FLUX / LTX-Video base) | rocm7.1.1, PyTorch 2.10.0 | [BSD-3-Clause](https://github.com/pytorch/pytorch/blob/main/LICENSE) |
+| AMD Device Metrics Exporter | v1.4.2 | [Apache-2.0](https://github.com/ROCm/device-metrics-exporter/blob/main/LICENSE) |
+| Prometheus | v3.3.1 | [Apache-2.0](https://github.com/prometheus/prometheus/blob/main/LICENSE) |
+| Node Exporter | v1.9.1 | [Apache-2.0](https://github.com/prometheus/node_exporter/blob/master/LICENSE) |
+| Python | 3.11-slim | [PSF-2.0](https://docs.python.org/3/license.html) |
+| Node.js | 20-alpine | [MIT](https://github.com/nodejs/node/blob/main/LICENSE) |
+| Docker | >=25.0 | [Apache-2.0](https://github.com/moby/moby/blob/master/LICENSE) |
+| Docker Compose | >=v2.0 | [Apache-2.0](https://github.com/docker/compose/blob/main/LICENSE) |
+| fastapi | 0.133.0 | [MIT](https://github.com/fastapi/fastapi/blob/master/LICENSE) |
+| uvicorn[standard] | 0.41.0 | [BSD-3-Clause](https://github.com/encode/uvicorn/blob/master/LICENSE.md) |
+| celery[redis] | 5.6.2 | [BSD-3-Clause](https://github.com/celery/celery/blob/main/LICENSE) |
+| redis (Python) | 6.4.0 | [MIT](https://github.com/redis/redis-py/blob/master/LICENSE) |
+| sqlalchemy[asyncio] | 2.0.47 | [MIT](https://github.com/sqlalchemy/sqlalchemy/blob/main/LICENSE) |
+| asyncpg | 0.31.0 | [Apache-2.0](https://github.com/MagicStack/asyncpg/blob/master/LICENSE) |
+| pydantic-settings | 2.13.1 | [MIT](https://github.com/pydantic/pydantic-settings/blob/main/LICENSE) |
+| httpx | 0.28.1 | [BSD-3-Clause](https://github.com/encode/httpx/blob/master/LICENSE.md) |
+| minio (Python SDK) | 7.2.20 | [Apache-2.0](https://github.com/minio/minio-py/blob/master/LICENSE) |
+| numpy | 2.4.2 | [BSD-3-Clause](https://numpy.org/doc/stable/license.html) |
+| pillow | 12.2.0 | [MIT-CMU](https://github.com/python-pillow/Pillow/blob/main/LICENSE) |
+| psycopg | 3.2.9 | [LGPL-3.0-only](https://github.com/psycopg/psycopg/blob/master/LICENSE.txt) |
+| pytesseract | 0.3.13 | [Apache-2.0](https://github.com/madmaze/pytesseract/blob/master/LICENSE) |
+| defusedxml | 0.7.1 | [PSF-2.0](https://github.com/tiran/defusedxml/blob/main/LICENSE) |
+| diffusers[torch] | >=0.36.0 | [Apache-2.0](https://github.com/huggingface/diffusers/blob/main/LICENSE) |
+| transformers | latest | [Apache-2.0](https://github.com/huggingface/transformers/blob/main/LICENSE) |
+| accelerate | latest | [Apache-2.0](https://github.com/huggingface/accelerate/blob/main/LICENSE) |
+| peft | latest | [Apache-2.0](https://github.com/huggingface/peft/blob/main/LICENSE) |
+| sentencepiece | latest | [Apache-2.0](https://github.com/google/sentencepiece/blob/master/LICENSE) |
+| protobuf | latest | [BSD-3-Clause](https://github.com/protocolbuffers/protobuf/blob/master/LICENSE) |
+| safetensors | latest | [Apache-2.0](https://github.com/huggingface/safetensors/blob/main/LICENSE) |
+| huggingface_hub | latest | [Apache-2.0](https://github.com/huggingface/huggingface_hub/blob/main/LICENSE) |
+| imageio | latest | [BSD-2-Clause](https://github.com/imageio/imageio/blob/master/LICENSE) |
+| imageio-ffmpeg | latest | [BSD-2-Clause](https://github.com/imageio/imageio-ffmpeg/blob/master/LICENSE) |
+| react | ^19.0.0 | [MIT](https://github.com/facebook/react/blob/main/LICENSE) |
+| react-dom | ^19.0.0 | [MIT](https://github.com/facebook/react/blob/main/LICENSE) |
+| react-redux | ^9.2.0 | [MIT](https://github.com/reduxjs/react-redux/blob/master/LICENSE.md) |
+| @reduxjs/toolkit | ^2.11.2 | [MIT](https://github.com/reduxjs/redux-toolkit/blob/master/LICENSE) |
+| vite | ^6.0.0 | [MIT](https://github.com/vitejs/vite/blob/main/LICENSE) |
+| @vitejs/plugin-react | ^4.3.0 | [MIT](https://github.com/vitejs/vite-plugin-react/blob/main/LICENSE) |
+| ffmpeg (system) | — | [LGPL-2.1-or-later](https://ffmpeg.org/legal.html) |
+| tesseract-ocr (system) | — | [Apache-2.0](https://github.com/tesseract-ocr/tesseract/blob/main/LICENSE) |
 
 ### AI/ML Models (Runtime-Fetched)
 
 | Model | Provider | License |
 |-------|----------|---------|
-| FLUX.1-schnell | Black Forest Labs | [Apache License 2.0](https://github.com/black-forest-labs/flux/blob/main/model_licenses/LICENSE-FLUX1-schnell) |
-| AnimateDiff-Lightning | ByteDance | [CreativeML Open RAIL-M](https://huggingface.co/ByteDance/AnimateDiff-Lightning/blob/main/LICENSE.md) |
-| DreamShaper | Lykon | [CreativeML Open RAIL-M](https://huggingface.co/spaces/CompVis/stable-diffusion-license) |
-| AnimateDiff Motion LoRA | guoyww | [Apache License 2.0](https://github.com/guoyww/AnimateDiff/blob/main/LICENSE.txt) |
-| Qwen3 8B | Alibaba Cloud (Qwen) | [Apache License 2.0](https://huggingface.co/Qwen/Qwen3-8B/blob/main/LICENSE) |
-| Kokoro-82M TTS | hexgrad | [Apache License 2.0](https://github.com/hexgrad/kokoro/blob/main/LICENSE) |
+| FLUX.1-schnell | Black Forest Labs | [Apache-2.0](https://github.com/black-forest-labs/flux/blob/main/model_licenses/LICENSE-FLUX1-schnell) |
+| AnimateDiff-Lightning | ByteDance | [LicenseRef-CreativeML-OpenRAIL-M](https://huggingface.co/ByteDance/AnimateDiff-Lightning/blob/main/LICENSE.md) |
+| DreamShaper | Lykon | [LicenseRef-CreativeML-OpenRAIL-M](https://huggingface.co/spaces/CompVis/stable-diffusion-license) |
+| AnimateDiff Motion LoRA | guoyww | [Apache-2.0](https://github.com/guoyww/AnimateDiff/blob/main/LICENSE.txt) |
+| Qwen3 8B | Alibaba Cloud (Qwen) | [Apache-2.0](https://huggingface.co/Qwen/Qwen3-8B/blob/main/LICENSE) |
+| Kokoro-82M TTS | hexgrad | [Apache-2.0](https://github.com/hexgrad/kokoro/blob/main/LICENSE) |
 
