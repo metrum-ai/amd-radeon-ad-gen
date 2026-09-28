@@ -9,6 +9,7 @@ include:
   - ./services/ollama/docker-compose.yml
   - ./services/openclaw/docker-compose.yml
   - ./services/kokoro-tts/docker-compose.yml
+  - ./services/model-cache/docker-compose.yml
   - ./services/flux-server/docker-compose.yml
   - ./services/ltx-video/docker-compose.yml
 

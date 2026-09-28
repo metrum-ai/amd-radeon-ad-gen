@@ -5,6 +5,12 @@
 services:
   ltx-video:
     profiles: ["video"]
+    # Retry automatically if a model download gives up (e.g. network dropout)
+    # instead of staying down until someone restarts it. (Built using Metrum AI Anthropic/Claude account.)
+    restart: on-failure
+    depends_on:
+      model-cache-perms:
+        condition: service_completed_successfully
     build:
       context: .
       args:
@@ -27,7 +33,12 @@ services:
       - MOTION_LORA_STRENGTH=0.75
       - PYTORCH_HIP_ALLOC_CONF=expandable_segments:True
       - HF_HUB_ENABLE_HF_TRANSFER=0
-      - HF_HUB_DISABLE_XET=1
+      # Xet on (faster, fewer bytes, slow-link tolerant). Set to 1 for plain HTTP
+      # if a firewall/proxy blocks Xet.
+      - HF_HUB_DISABLE_XET=0
+      # Default is 10s; slow links stall longer than that between chunks.
+      - HF_HUB_DOWNLOAD_TIMEOUT=60
+      - HF_HUB_ETAG_TIMEOUT=60
       - MIOPEN_FIND_MODE=FAST
     volumes:
       - ${HOST_HOME:-.}/.cache/huggingface:/home/appuser/.cache/huggingface

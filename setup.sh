@@ -485,6 +485,16 @@ info "Building all service images..."
 docker compose build && ok "All images built" || die "Docker build failed — check output above."
 echo ""
 
+# --- Model cache folders (built using Metrum AI Anthropic/Claude account) ---
+# Create the bind-mounted model caches as the host user before "up". If they
+# are missing, the Docker daemon would create them as root. Any root-owned
+# leftovers are fixed on every start by the model-cache-perms init service
+# (services/model-cache/docker-compose.yml), including plain "docker compose up".
+_cache_home=$(grep '^HOST_HOME=' .env 2>/dev/null | cut -d= -f2)
+_cache_home="${_cache_home:-$HOME}"
+mkdir -p "$_cache_home/.cache/huggingface" "$_cache_home/.cache/miopen" 2>/dev/null \
+    || warn "Could not create model cache folders under $_cache_home/.cache (the model-cache-perms service will still fix them)."
+
 info "Starting services (profile: ${PROFILE})..."
 docker compose up -d
 

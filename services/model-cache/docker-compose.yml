@@ -1,0 +1,38 @@
+# Copyright Advanced Micro Devices, Inc.
+#
+# SPDX-License-Identifier: MIT
+#
+# Built using Metrum AI Anthropic/Claude account.
+
+# One-shot init container that makes the host model caches writable by the
+# FLUX / LTX-Video containers, which run as APP_UID:APP_GID (the host user,
+# written to .env by setup.sh).
+#
+# Why it is needed: when a bind-mount source such as ~/.cache/miopen does not
+# exist, the Docker daemon creates it as root, and tools run as root can leave
+# root-owned folders inside ~/.cache/huggingface. Either one makes the model
+# download fail with "PermissionError: [Errno 13]". This runs as root, only
+# touches entries with the wrong owner, and exits, so it is quick even on a
+# large, already-correct cache. Same pattern as rustfs-perms.
+#
+# If ~/.cache itself did not exist, Docker creates it as root as well, which
+# would stop the user's other programs from writing there. So ~/.cache itself
+# is handed to the user too, but only when it is root-owned (not recursive:
+# anything else inside ~/.cache is left alone).
+services:
+  model-cache-perms:
+    profiles: ["image", "image2", "video"]
+    image: alpine
+    user: root
+    volumes:
+      - ${HOST_HOME:-.}/.cache:/cache
+      - ${HOST_HOME:-.}/.cache/huggingface:/hf
+      - ${HOST_HOME:-.}/.cache/miopen:/mi
+    command:
+      - sh
+      - -c
+      - >-
+        if [ "$$(stat -c %u /cache)" = 0 ]; then
+        chown ${APP_UID:-1000}:${APP_GID:-1000} /cache; fi;
+        find /hf /mi \( ! -user ${APP_UID:-1000} -o ! -group ${APP_GID:-1000} \)
+        -exec chown -h ${APP_UID:-1000}:${APP_GID:-1000} {} +

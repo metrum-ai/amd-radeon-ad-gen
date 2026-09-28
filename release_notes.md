@@ -1,3 +1,15 @@
+# Release v1.4
+
+## Updates
+
+* **Model Cache Ownership Handling**: A one-shot `model-cache-perms` init service now creates the Hugging Face and MIOpen cache folders and sets their ownership to the host user before the FLUX and video services start, so they can write to the cache on a fresh machine.
+
+* **Pinned Model Library Versions**: The video service now calls `pipe.vae.enable_slicing()` for compatibility with diffusers 0.40, and all Python packages in the FLUX and video images are pinned to tested versions.
+
+* **OpenClaw Startup Independent of Model Download**: OpenClaw now waits for Ollama to start rather than to become healthy, the `qwen3:8b` pull retries until it succeeds, and the Ollama health window is extended to 4 hours, so the UI comes up while the model is still downloading on slower connections.
+
+---
+
 # Release v1.3
 
 ## Features

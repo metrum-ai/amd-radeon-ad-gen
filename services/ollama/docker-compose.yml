@@ -5,6 +5,7 @@
 services:
   ollama:
     image: ollama/ollama:rocm
+    restart: on-failure
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
@@ -24,7 +25,13 @@ services:
         ollama serve &
         until ollama list > /dev/null 2>&1; do sleep 2; done
         echo "Ollama ready, pulling model..."
-        ollama pull qwen3:8b
+        # Retry until the pull succeeds: a dropout on a slow link would otherwise
+        # leave Ollama serving without the model forever. Pulls resume.
+        # (Built using Metrum AI Anthropic/Claude account.)
+        until ollama pull qwen3:8b; do
+          echo "ollama pull failed; retrying in 15s..."
+          sleep 15
+        done
         echo "Creating optimized model variant..."
         echo -e "FROM qwen3:8b\nPARAMETER num_ctx 4096" > /tmp/Modelfile
         ollama create qwen3-fast -f /tmp/Modelfile
@@ -37,4 +44,5 @@ services:
       interval: 30s
       timeout: 10s
       retries: 15
-      start_period: 600s
+      # Healthy only once qwen3:8b (5.2 GB) is pulled; allow up to 4h for slow links.
+      start_period: 14400s
