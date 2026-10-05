@@ -11,7 +11,6 @@ WORKDIR /app
 # pipe.enable_vae_slicing() and crashed the video server, and the Xet
 # download / timeout behaviour was verified on huggingface_hub 1.33.0 +
 # hf-xet 1.6.0. Bump deliberately and re-test.
-# (Built using Metrum AI Anthropic/Claude account.)
 RUN pip install --no-cache-dir \
     "diffusers[torch]==0.40.0" \
     "transformers==5.17.0" \

@@ -31,7 +31,6 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 # ran ~3x faster, and tolerate slow links better (300s read timeout, adaptive
 # concurrency, backoff retries). Set HF_HUB_DISABLE_XET=1 in the compose file
 # to fall back to plain HTTP, e.g. on networks that block Xet's CAS endpoint.
-# (Built using Metrum AI Anthropic/Claude account.)
 os.environ.setdefault("HF_HUB_DISABLE_XET", "0")
 try:
     import huggingface_hub.constants as _hf_consts

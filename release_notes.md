@@ -1,3 +1,12 @@
+# Release v1.5
+
+## Updates
+
+* **Setup Works When Run as Root or with sudo**: Running the setup script as root or with sudo no longer breaks the build. The image and video services are now always set up to run as a regular (non-root) user, and model downloads are kept in that user's home folder.
+
+
+---
+
 # Release v1.4
 
 ## Updates

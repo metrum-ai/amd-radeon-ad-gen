@@ -7,6 +7,12 @@
 # AI Ad Generator — Setup & Launch
 # Checks prerequisites, configures environment, detects GPUs, and starts services.
 # =============================================================================
+# Bash is required (arrays, pipefail); "sh setup.sh" would otherwise stop with
+# a cryptic "Illegal option -o pipefail".
+if [ -z "${BASH_VERSION:-}" ]; then
+    echo "[FAIL]  Run this script with bash: ./setup.sh (or: bash setup.sh)" >&2
+    exit 1
+fi
 set -euo pipefail
 
 RED='\033[0;31m'; YELLOW='\033[1;33m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
@@ -27,6 +33,82 @@ set_env() {
         sed -i "s|^${key}=.*|${key}=${val}|" .env
     else
         echo "${key}=${val}" >> .env
+    fi
+}
+
+# Resolve the non-root host UID/GID that the FLUX / LTX-Video containers run
+# as (written to .env as APP_UID/APP_GID). Under sudo or a root login, id -u
+# is 0, and the Dockerfiles' "useradd -u 0" fails with "UID 0 is not unique",
+# breaking the build. So use the invoking sudo user, else the 1000:1000
+# default the compose files already fall back to.
+resolve_app_ids() {
+    APP_UID_VAL=$(id -u)
+    APP_GID_VAL=$(id -g)
+    if [ "$APP_UID_VAL" -eq 0 ]; then
+        if [ -n "${SUDO_UID:-}" ] && [ "${SUDO_UID}" -ne 0 ]; then
+            APP_UID_VAL="${SUDO_UID}"
+            APP_GID_VAL="${SUDO_GID:-$SUDO_UID}"
+        else
+            APP_UID_VAL=1000
+            APP_GID_VAL=1000
+            warn "Running as root with no non-root sudo user — containers will run as UID/GID 1000:1000."
+        fi
+    fi
+    if [ "$APP_GID_VAL" -eq 0 ]; then
+        APP_GID_VAL=1000
+    fi
+}
+
+# Home directory of the user who launched the script. sudo resets HOME to
+# /root, which would put the model caches (~40 GB) under /root and let the
+# model-cache-perms service hand /root/.cache to APP_UID. Use the sudo user's
+# own home instead.
+USER_HOME="$HOME"
+if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER}" != "root" ]; then
+    _sudo_home=$(getent passwd "${SUDO_USER}" | cut -d: -f6 || true)
+    [ -n "$_sudo_home" ] && USER_HOME="$_sudo_home"
+fi
+
+# Prompt helper failure: stdin is closed or not a terminal (CI, nohup,
+# "< /dev/null"). Without this, the answer-required prompt loops below would
+# repeat forever.
+no_input() {
+    die "No input available for: $1 — run ./setup.sh from an interactive terminal."
+}
+
+# --- Credential helpers ---
+# Value of KEY in the current .env, or empty. The .env.example placeholder
+# (CHANGE_ME) counts as empty so a copied example file is never reused.
+old_env_val() {
+    local val
+    val=$(grep "^$1=" .env 2>/dev/null | head -1 | cut -d= -f2- || true)
+    [ "$val" = "CHANGE_ME" ] && val=""
+    echo "$val"
+}
+
+# 32 hex chars: safe inside the database URL, sed replacements and the
+# OpenClaw seed substitution.
+gen_secret() {
+    od -An -N16 -tx1 /dev/urandom | tr -d ' \n'
+}
+
+# True if this compose project already has the named data volume.
+COMPOSE_PROJECT="${COMPOSE_PROJECT_NAME:-$(basename "$SCRIPT_DIR" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_-')}"
+volume_exists() {
+    docker volume inspect "${COMPOSE_PROJECT}_$1" >/dev/null 2>&1
+}
+
+# pick_secret OLD_VALUE VOLUME LEGACY_DEFAULT LABEL
+# Reuse OLD_VALUE; else keep LEGACY_DEFAULT if VOLUME already holds data
+# initialised with it; else generate a new random secret.
+pick_secret() {
+    if [ -n "$1" ]; then
+        echo "$1"
+    elif [ -n "$2" ] && volume_exists "$2"; then
+        warn "Existing '$2' data volume found without its .env — keeping the legacy default $4 so it still matches." >&2
+        echo "$3"
+    else
+        gen_secret
     fi
 }
 
@@ -145,7 +227,7 @@ else
 fi
 
 # Detect cached artifacts from a previous run
-_cache_home="$HOME"
+_cache_home="$USER_HOME"
 [ -f .env ] && _eh=$(grep '^HOST_HOME=' .env 2>/dev/null | cut -d= -f2) && [ -n "$_eh" ] && _cache_home="$_eh"
 
 _cached=""
@@ -314,7 +396,7 @@ if [ "$FREE_GPU_COUNT" -eq 2 ]; then
     echo "    2) Video generation  (AnimateDiff Lightning)"
     echo ""
     while true; do
-        read -rp "  Enter choice [1/2]: " _choice || _choice=""
+        read -rp "  Enter choice [1/2]: " _choice || no_input "generation track choice"
         case "$_choice" in
             1)
                 PROFILE="image"
@@ -346,7 +428,7 @@ elif [ "$FREE_GPU_COUNT" -eq 3 ]; then
     echo "    3) Image + Video      (FLUX on GPU ${FREE_GPUS[1]}, AnimateDiff on GPU ${FREE_GPUS[2]})"
     echo ""
     while true; do
-        read -rp "  Enter choice [1/2/3]: " _choice || _choice=""
+        read -rp "  Enter choice [1/2/3]: " _choice || no_input "deployment layout choice"
         case "$_choice" in
             1)
                 PROFILE="image"
@@ -405,6 +487,11 @@ if [ -f .env ]; then
         SKIP_ENV=1
         echo ""
     else
+        # Keep the credentials the running data volumes were created with.
+        _old_pg=$(old_env_val POSTGRES_PASSWORD)
+        _old_ak=$(old_env_val RUSTFS_ACCESS_KEY)
+        _old_sk=$(old_env_val RUSTFS_SECRET_KEY)
+        _old_oc=$(old_env_val OPENCLAW_AUTH_TOKEN)
         rm .env
     fi
 fi
@@ -415,24 +502,33 @@ if [ "$SKIP_ENV" -eq 0 ] && [ ! -f .env ]; then
     echo ""
 
     # --- Infrastructure service credentials (written to .env only) ---
-    set_env POSTGRES_PASSWORD "postgres"
-    sed -i "s|^APP_DATABASE_URL=.*|APP_DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/adgen|" .env
+    # Random per install instead of fixed, publicly known defaults; reused
+    # from the overwritten .env, or kept at the legacy defaults when data
+    # volumes already exist, so existing databases still accept them.
+    _pg=$(pick_secret "${_old_pg:-}" pgdata postgres "PostgreSQL password")
+    set_env POSTGRES_PASSWORD "${_pg}"
+    sed -i "s|^APP_DATABASE_URL=.*|APP_DATABASE_URL=postgresql+asyncpg://postgres:${_pg}@postgres:5432/adgen|" .env
 
-    set_env RUSTFS_ACCESS_KEY "minioadmin"
-    set_env RUSTFS_SECRET_KEY "minioadmin"
-    sed -i "s|^APP_MINIO_ACCESS_KEY=.*|APP_MINIO_ACCESS_KEY=minioadmin|" .env
-    sed -i "s|^APP_MINIO_SECRET_KEY=.*|APP_MINIO_SECRET_KEY=minioadmin|" .env
+    _ak=$(pick_secret "${_old_ak:-}" rustfsdata minioadmin "storage access key")
+    _sk=$(pick_secret "${_old_sk:-}" rustfsdata minioadmin "storage secret key")
+    set_env RUSTFS_ACCESS_KEY "${_ak}"
+    set_env RUSTFS_SECRET_KEY "${_sk}"
+    sed -i "s|^APP_MINIO_ACCESS_KEY=.*|APP_MINIO_ACCESS_KEY=${_ak}|" .env
+    sed -i "s|^APP_MINIO_SECRET_KEY=.*|APP_MINIO_SECRET_KEY=${_sk}|" .env
     sed -i "s|^APP_MINIO_ENDPOINT=.*|APP_MINIO_ENDPOINT=rustfs:9000|" .env
 
-    set_env OPENCLAW_AUTH_TOKEN "adgen-openclaw-internal"
-    sed -i "s|^APP_OPENCLAW_API_KEY=.*|APP_OPENCLAW_API_KEY=adgen-openclaw-internal|" .env
+    # OpenClaw rewrites its config from the seed on every start, so a new
+    # token never conflicts with existing data.
+    _oc=$(pick_secret "${_old_oc:-}" "" "" "OpenClaw token")
+    set_env OPENCLAW_AUTH_TOKEN "${_oc}"
+    sed -i "s|^APP_OPENCLAW_API_KEY=.*|APP_OPENCLAW_API_KEY=${_oc}|" .env
 
     sed -i "s|^APP_LLM_API_KEY=.*|APP_LLM_API_KEY=ollama-no-auth|" .env
 
     # --- HuggingFace Token (required) ---
     echo -e "  ${BOLD}Secrets${NC}"
     while true; do
-        read -rp "  HuggingFace API Token (hf_...): " _hf || _hf=""
+        read -rp "  HuggingFace API Token (hf_...): " _hf || no_input "HuggingFace token"
         if [ -n "$_hf" ]; then
             break
         fi
@@ -443,7 +539,7 @@ if [ "$SKIP_ENV" -eq 0 ] && [ ! -f .env ]; then
     echo ""
 
     # --- HOST_HOME ---
-    _default_home="$HOME"
+    _default_home="$USER_HOME"
     read -rp "  Host home directory for model cache [${_default_home}]: " _host_home || _host_home=""
     _host_home="${_host_home:-$_default_home}"
     set_env HOST_HOME "${_host_home}"
@@ -451,6 +547,19 @@ if [ "$SKIP_ENV" -eq 0 ] && [ ! -f .env ]; then
     echo ""
     ok ".env written"
     echo ""
+fi
+
+# --- Kept .env from an earlier sudo run ---
+# Older setup.sh versions defaulted HOST_HOME to /root under sudo. Keeping that
+# .env would put the model caches under /root and let model-cache-perms hand
+# /root/.cache to APP_UID, so point it back at the sudo user's home. Custom
+# HOST_HOME values are left untouched.
+if [ "$SKIP_ENV" -eq 1 ] && [ "$USER_HOME" != "$HOME" ]; then
+    _kept_home=$(grep '^HOST_HOME=' .env 2>/dev/null | cut -d= -f2 || true)
+    if [ "$_kept_home" = "$HOME" ]; then
+        set_env HOST_HOME "${USER_HOME}"
+        warn "HOST_HOME was ${_kept_home} (root's home, from an earlier sudo run) — changed to ${USER_HOME}."
+    fi
 fi
 
 # --- Always apply GPU and profile settings ---
@@ -463,8 +572,9 @@ if [ "$FLUX_GPU_2" -ge 0 ]; then
 fi
 set_env LTX_VIDEO_GPU_ID "${LTX_GPU}"
 set_env RENDER_GID "${RENDER_GID}"
-set_env APP_UID "$(id -u)"
-set_env APP_GID "$(id -g)"
+resolve_app_ids
+set_env APP_UID "${APP_UID_VAL}"
+set_env APP_GID "${APP_GID_VAL}"
 set_env COMPOSE_PROFILES "${PROFILE}"
 
 if [ "$FLUX_GPU_2" -ge 0 ]; then
@@ -485,13 +595,13 @@ info "Building all service images..."
 docker compose build && ok "All images built" || die "Docker build failed — check output above."
 echo ""
 
-# --- Model cache folders (built using Metrum AI Anthropic/Claude account) ---
+# --- Model cache folders ---
 # Create the bind-mounted model caches as the host user before "up". If they
 # are missing, the Docker daemon would create them as root. Any root-owned
 # leftovers are fixed on every start by the model-cache-perms init service
 # (services/model-cache/docker-compose.yml), including plain "docker compose up".
 _cache_home=$(grep '^HOST_HOME=' .env 2>/dev/null | cut -d= -f2)
-_cache_home="${_cache_home:-$HOME}"
+_cache_home="${_cache_home:-$USER_HOME}"
 mkdir -p "$_cache_home/.cache/huggingface" "$_cache_home/.cache/miopen" 2>/dev/null \
     || warn "Could not create model cache folders under $_cache_home/.cache (the model-cache-perms service will still fix them)."
 

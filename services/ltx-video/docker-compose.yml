@@ -6,7 +6,7 @@ services:
   ltx-video:
     profiles: ["video"]
     # Retry automatically if a model download gives up (e.g. network dropout)
-    # instead of staying down until someone restarts it. (Built using Metrum AI Anthropic/Claude account.)
+    # instead of staying down until someone restarts it.
     restart: on-failure
     depends_on:
       model-cache-perms:

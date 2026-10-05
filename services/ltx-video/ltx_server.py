@@ -21,13 +21,12 @@ import tempfile
 import threading
 import time
 
-# hf_transfer is not installed in this image, so keep it off.
+# Hugging Face transfer is not installed in this image, so keep it off.
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 # Xet downloads are on by default: in testing they moved ~31% fewer bytes,
 # ran ~3x faster, and tolerate slow links better (300s read timeout, adaptive
 # concurrency, backoff retries). Set HF_HUB_DISABLE_XET=1 in the compose file
 # to fall back to plain HTTP, e.g. on networks that block Xet's CAS endpoint.
-# (Built using Metrum AI Anthropic/Claude account.)
 os.environ.setdefault("HF_HUB_DISABLE_XET", "0")
 try:
     import huggingface_hub.constants as _hf_consts
@@ -69,7 +68,6 @@ MOTION_LORA_STRENGTH = float(os.getenv("MOTION_LORA_STRENGTH", "0.75"))
 # file to load, so the local_files_only cache check below always failed and
 # every start needed internet (offline, the LoRA was silently skipped). All
 # guoyww/animatediff-motion-lora-* repos use this file name.
-# (Built using Metrum AI Anthropic/Claude account.)
 MOTION_LORA_WEIGHT = os.getenv(
     "MOTION_LORA_WEIGHT", "diffusion_pytorch_model.safetensors"
 )
@@ -167,8 +165,7 @@ def load_pipeline() -> AnimateDiffPipeline:
     pipe.set_progress_bar_config(disable=True)
     # Call on the VAE directly: the pipeline-level enable_vae_slicing()
     # shortcut was removed in newer diffusers (absent in 0.40). This form
-    # works on old and new versions alike. (Built using Metrum AI
-    # Anthropic/Claude account.)
+    # works on old and new versions alike.
     pipe.vae.enable_slicing()
 
     if MOTION_LORA:

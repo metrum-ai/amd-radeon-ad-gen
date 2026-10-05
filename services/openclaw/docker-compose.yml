@@ -10,7 +10,6 @@ services:
     # lease, a fresh start fails with "Another Gateway owner lease is still
     # active" until that lease expires (5 min after its last heartbeat). With
     # on-failure, Docker keeps retrying with backoff, so it recovers on its own.
-    # (Built using Metrum AI Anthropic/Claude account.)
     restart: on-failure
     volumes:
       - ./config/openclaw.json:/tmp/openclaw-seed.json:ro
@@ -28,7 +27,6 @@ services:
     # service_started (not service_healthy): Ollama only turns healthy after its
     # model download, which can take hours on a slow link, and nginx waits on
     # openclaw, so waiting for healthy could keep the whole UI down.
-    # (Built using Metrum AI Anthropic/Claude account.)
     depends_on:
       ollama:
         condition: service_started

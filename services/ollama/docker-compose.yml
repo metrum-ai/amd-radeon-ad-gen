@@ -27,7 +27,6 @@ services:
         echo "Ollama ready, pulling model..."
         # Retry until the pull succeeds: a dropout on a slow link would otherwise
         # leave Ollama serving without the model forever. Pulls resume.
-        # (Built using Metrum AI Anthropic/Claude account.)
         until ollama pull qwen3:8b; do
           echo "ollama pull failed; retrying in 15s..."
           sleep 15

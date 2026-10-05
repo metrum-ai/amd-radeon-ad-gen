@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 #
-# Built using Metrum AI Anthropic/Claude account.
 
 # One-shot init container that makes the host model caches writable by the
 # FLUX / LTX-Video containers, which run as APP_UID:APP_GID (the host user,
